@@ -42,10 +42,41 @@ XmlNode readDocument(char[]src)
 /// An exception thrown on an xml parsing error.
 class XmlError : Exception
 {	/// Throws an exception with the current line number and an error message.
-	this(uint lineNumber, char[] msg)
-	{	super("(Line " ~ .toString(lineNumber) ~ ")" ~ msg);
+	this(char[] msg)
+	{	super(msg);
 	}
 }
+
+/// An exception thrown on an xml parsing error.
+class XmlMalformedAttribute : XmlError
+{	/// Throws an exception with the current line number and an error message.
+	this(char[]part,char[] msg)
+	{	super("Malformed Attribute " ~ part ~ ": " ~ msg ~ "\n");
+	}
+}
+/// An exception thrown on an xml parsing error.
+class XmlMalformedSubnode : XmlError
+{	/// Throws an exception with the current line number and an error message.
+	this(char[] name)
+	{	super("Malformed Subnode of " ~ name);
+	}
+}
+/// An exception thrown on an xml parsing error.
+class XmlMissingEndTag : XmlError
+{	/// Throws an exception with the current line number and an error message.
+	this(char[] name)
+	{	super("Missing End Tag " ~ name ~ "\n");
+	}
+}
+/// An exception thrown on an xml parsing error.
+class XmlCloseTag : XmlError
+{	/// Throws an exception with the current line number and an error message.
+	this()
+	{	super("");
+	}
+}
+
+
 
 /**
  * XmlNode represents a single xml node and has methods for modifying
@@ -236,70 +267,108 @@ class XmlNode
 	}
 
 	void addChildren(char[]xsrc) {
+		writefln("Parsing children!");
 		while (xsrc.length) {
 			// there may be multiple tag trees or cdata elements
-			parseNode(this,xsrc);
+			xsrc = parseNode(this,xsrc);
 		}
 	}
 
 	// returns everything after the first node tree (a node can be text as well)
 	private char[] parseNode(XmlNode parent,char[]xsrc) {
+		eatWhiteSpace(xsrc);
+		// if it was just whitespace and no more text or tags, make sure that's covered
+		if (!xsrc.length) {
+			return "";
+		}
 		char[] cdata = stripText(xsrc);
 		if (cdata.length){
+			writefln("I found cdata text: "~cdata);
 			parent.addCdata(cdata);
 			return xsrc;
 		}
+		// look for a closing tag to see if we're done
+		if (auto m = std.regexp.search(xsrc, "^</.*?>")) {
+			writefln("I found a closing tag (yikes)!");
+			throw new XmlCloseTag();
+		}
 		// look for a *REAL* cdata tag
-		if (auto m = std.regexp.search(xsrc, "^<[CDATA[.*?]]>")) {
-			parent.addCdata(m.match(0)[8..m.match(0).length-4]);
+		if (auto m = std.regexp.search(xsrc, "^<!\\[CDATA\\[.*?\\]\\]>")) {
+			cdata = m.match(0)[9..m.match(0).length-3];
+			writefln("I found a cdata tag: %s\nremaining: %s",cdata,m.post);
+			parent.addCdata(cdata);
 			return m.post;
 		}
 		// look for processing instructions
 		if (auto m = std.regexp.search(xsrc, "^<\\?.*?\\?>")) {
+			writefln("I found a processing instruction!");
 			return m.post;
 		}
 		// look for comments or other xml instructions
 		if (auto m = std.regexp.search(xsrc, "^<!.*?>")) {
+			writefln("I found a XML instruction!");
 			return m.post;
 		}
 		if (auto m = std.regexp.search(xsrc, "^<.*?>")) {
-			char[]contents=m.match(0)[1..m.match(0).length-2];
+			writefln("I found a XML tag: "~m.match(0));
+			char[]contents=m.match(0);
+			contents = contents[1..contents.length-1];
+			writefln("Contents are: "~contents);
 			// check for self-closing tag
 			bool selfclosing = false;
 			if (contents[contents.length-1] == '/') {
 				// strip off the trailing / and go about business as normal
-				contents = contents[0..contents.length-2];
+				contents = contents[0..contents.length-1];
 				selfclosing = true;
+				writefln("self-closing tag: "~contents);
 			}
 			char[]name = getNextToken(contents);
+			writefln("It was a "~name~" tag!");
 			eatWhiteSpace(contents);
+			writefln("Still need to parse: "~contents);
 			XmlNode newnode = new XmlNode(name);
 			// ats is a fun variable (attribute status) 0=nothing,1=attr,2=trans,3=value,4=quoting
 			int ats = 0;
 			char[]attr = "";
 			char[]value = "";
 			foreach (char x;contents) {
+				//writefln("Got character "~x);
 				// be warned, even though commented, this logic flow is ugly and probably needs to be redone
+				// check for the quote escape
+				if (x == '\\') {
+					// why is there a backslash here?
+					if (ats == 3) {
+						throw new XmlMalformedAttribute("Value",value~x);
+					} else {
+						throw new XmlMalformedAttribute("Name",attr~x);
+					}
+				}
 				if (isWhiteSpace(x) && ats != 4) {
 					if (ats == 3) {
 						// just finished a nonquoted attribute value
 						newnode.setAttribute(attr,value);
+						writefln("Got attribute %s with value %s",attr,value);
 						attr = "";
 						value = "";
 						ats = 0;
 					} else if (ats != 0) {
 						// we have a problem here....a space in the middle of our attribute
 						// throw a malformed attribute exception
+						throw new XmlMalformedAttribute("Name",attr);
 					}
+					//writefln("Whitespace between attributes!");
 					continue;
 				}
 				if (x == '"') {
 					// jump onto a quoted value
 					if (ats == 2) {
+						//writefln("began a quoted value!");
 						ats = 4;
+						continue;
 					} else if (ats == 4) {
 						// we just finished a quoting section which means that we have a properly formed attribute
 						newnode.setAttribute(attr,value);
+						writefln("Got attribute %s with value %s",attr,value);
 						attr = "";
 						value = "";
 						// because of the way this is done, quoted attributes can be stacked with no whitespace
@@ -309,15 +378,23 @@ class XmlNode
 					} else {
 						// we have a quote in the WRONG place
 						// throw a malformed attribute exception
+						if (ats == 1) {
+							throw new XmlMalformedAttribute("Name",attr~x);
+						} else {
+							throw new XmlMalformedAttribute("Value",value~x);
+						}
 					}
 				}
 				// cover the transition from attribute name to value
 				if (ats == 1 && x == '=') {
+					//writefln("found end of attribute name!");
 					ats = 2;
 					continue;
 				}
 				// come off the transition onto the unquoted value
 				if (ats == 2) {
+					//writefln("found beginning of unquoted attribute value!");
+					value ~= x;
 					ats = 3;
 					continue;
 				}
@@ -325,59 +402,84 @@ class XmlNode
 					value ~= x;
 					continue;
 				}
-				if (ats == 1) {
+				if (ats == 1 || (!isWhiteSpace(x) && ats == 0)) {
+					ats = 1;
 					attr ~= x;
 					continue;
 				}
 			}
+			if (ats == 3) {
+				// we have an unquoted value that happened to be the last attribute, so add it
+				newnode.setAttribute(attr,value);
+				writefln("Got attribute %s with value %s",attr,value);
+			}
+			if (ats == 4) {
+				// great...an unterminated quote
+				throw new XmlMalformedAttribute("Value",value);
+			}
 			char[]ret = "";
+			ret = m.post;
 			if (!selfclosing) {
 				// now that we've added all the attributes to the node, pass the m.post string and the current node to the next node
-				// probably need to catch and rethrow exceptions here for a proper backtrace
-				ret = parseNode(newnode,m.post);
+				try {
+					while (ret.length) {
+						ret = parseNode(newnode,ret);
+					}
+				} catch (XmlCloseTag e) {
+				} catch (Exception e) {
+					throw new XmlMalformedSubnode(name~"\n"~e.toString());
+				}
 				// since everything has returned successfully so far, try to parse out my closing tag
 				// if we can find the closing tag, that means we can add our node to the parent and finish with this
-				if (auto m = std.regexp.search(ret, "^</"~name~">")) {
+				if (auto k = std.regexp.search(ret, "^</"~name~">")) {
 					parent.addChild(newnode);
-					return m.post;
+					ret = k.post;
 				} else {
 					// throw a missing closing tag exception
+					throw new XmlMissingEndTag(name);
 				}
 			}
-			return m.post;
+			eatWhiteSpace(ret);
+			return ret;
 		} else {
 			// throw an exception cause we have a <, but no matching >
+			throw new XmlError("Missing gt to close tag");
 		}
 	}
 
 	char[]stripText(inout char[] xsrc) {
 		char[]ret = "";
+		if (!xsrc.length) {
+			return ret;
+		}
 		if (xsrc[0] == '<') {
 			return ret;
 		}
 		if (auto m = std.regexp.search(xsrc, "^.*?<")) {
-			xsrc = m.post;
-			return m.match(0);
+			xsrc = "<"~m.post;
+			ret =  m.match(0)[0..m.match(0).length-1];
+			writefln("Stripped %s off the front leaving: %s",ret,xsrc);
 		} else {
 			ret = xsrc;
 			xsrc.length = 0;
-			return ret;
+			writefln("all cdata: "~ret);
 		}
+		return ret;
 	}
 
 	char[]getNextToken(inout char[]input) {
 		eatWhiteSpace(input);
 		char[]ret = "";
-		while (!isWhiteSpace(input[0])) {
+		while (input.length > 0 && !isWhiteSpace(input[0])) {
 			ret ~= input[0];
-			input = input[1..input.length-1];
+			input = input[1..input.length];
 		}
 		return ret;
 	}
 
 	void eatWhiteSpace(inout char[]input) {
-		while (isWhiteSpace(input[0])) {
-			input = input[1..input.length-1];
+		while (input.length > 0 && isWhiteSpace(input[0])) {
+			input = input[1..input.length];
 		}
 	}
 
