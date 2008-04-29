@@ -267,7 +267,9 @@ class XmlNode
 	}
 
 	void addChildren(char[]xsrc) {
-		writefln("Parsing children!");
+		// if regex worked right, i wouldn't need this line and it would probably run a little faster
+		// that would require that I use the s attribute for all the other regexen
+		xsrc = std.regexp.sub(xsrc,"\n","","g");
 		while (xsrc.length) {
 			// there may be multiple tag trees or cdata elements
 			xsrc = parseNode(this,xsrc);
@@ -283,51 +285,53 @@ class XmlNode
 		}
 		char[] cdata = stripText(xsrc);
 		if (cdata.length){
-			writefln("I found cdata text: "~cdata);
+			//writefln("I found cdata text: "~cdata);
 			parent.addCdata(cdata);
 			return xsrc;
 		}
+		eatWhiteSpace(xsrc);
+		//writefln(xsrc[0..51]);
 		// look for a closing tag to see if we're done
-		if (auto m = std.regexp.search(xsrc, "^</.*?>")) {
-			writefln("I found a closing tag (yikes)!");
+		if (auto m = std.regexp.search(xsrc, "^</.*?>","")) {
+			//writefln("I found a closing tag (yikes):%s!",m.match(0));
 			throw new XmlCloseTag();
 		}
 		// look for a *REAL* cdata tag
-		if (auto m = std.regexp.search(xsrc, "^<!\\[CDATA\\[.*?\\]\\]>")) {
+		if (auto m = std.regexp.search(xsrc, "^<!\\[CDATA\\[.*?\\]\\]>","")) {
 			cdata = m.match(0)[9..m.match(0).length-3];
-			writefln("I found a cdata tag: %s\nremaining: %s",cdata,m.post);
+			//writefln("I found a cdata tag: %s",cdata);
 			parent.addCdata(cdata);
 			return m.post;
 		}
 		// look for processing instructions
-		if (auto m = std.regexp.search(xsrc, "^<\\?.*?\\?>")) {
-			writefln("I found a processing instruction!");
+		if (auto m = std.regexp.search(xsrc, "^<\\?.*?\\?>","")) {
+			//writefln("I found a processing instruction: "~m.match(0));
 			return m.post;
 		}
 		// look for comments or other xml instructions
-		if (auto m = std.regexp.search(xsrc, "^<!.*?>")) {
-			writefln("I found a XML instruction!");
+		if (auto m = std.regexp.search(xsrc, "^<!.*?>","")) {
+			//writefln("I found a XML instruction!");
 			return m.post;
 		}
-		if (auto m = std.regexp.search(xsrc, "^<.*?>")) {
-			writefln("I found a XML tag: "~m.match(0));
+		if (auto m = std.regexp.search(xsrc, "^<.*?>","")) {
+			//writefln("I found a XML tag: "~m.match(0));
 			char[]contents=m.match(0);
 			contents = contents[1..contents.length-1];
-			writefln("Contents are: "~contents);
+			//writefln("Tag Contents: "~contents);
 			// check for self-closing tag
 			bool selfclosing = false;
 			if (contents[contents.length-1] == '/') {
 				// strip off the trailing / and go about business as normal
 				contents = contents[0..contents.length-1];
 				selfclosing = true;
-				writefln("self-closing tag: "~contents);
+				//writefln("self-closing tag!");
 			}
 			char[]name = getNextToken(contents);
-			writefln("It was a "~name~" tag!");
+			//writefln("It was a "~name~" tag!");
 			eatWhiteSpace(contents);
-			writefln("Still need to parse: "~contents);
+			//writefln("Attributes: "~contents);
 			XmlNode newnode = new XmlNode(name);
-			// ats is a fun variable (attribute status) 0=nothing,1=attr,2=trans,3=value,4=quoting
+			// ats is a fun variable (attribute status) 0=nothing,1=attr,2=trans,3=value,4=double quoting,5=single quoting
 			int ats = 0;
 			char[]attr = "";
 			char[]value = "";
@@ -347,7 +351,7 @@ class XmlNode
 					if (ats == 3) {
 						// just finished a nonquoted attribute value
 						newnode.setAttribute(attr,value);
-						writefln("Got attribute %s with value %s",attr,value);
+						//writefln("Got attribute %s with value %s",attr,value);
 						attr = "";
 						value = "";
 						ats = 0;
@@ -359,30 +363,36 @@ class XmlNode
 					//writefln("Whitespace between attributes!");
 					continue;
 				}
-				if (x == '"') {
+				if (x == '"' || x == '\'') {
+					int tmp = (x=='"'?4:5);
 					// jump onto a quoted value
 					if (ats == 2) {
 						//writefln("began a quoted value!");
-						ats = 4;
+						ats = tmp;
 						continue;
-					} else if (ats == 4) {
+					} else if (ats == tmp) {
 						// we just finished a quoting section which means that we have a properly formed attribute
 						newnode.setAttribute(attr,value);
-						writefln("Got attribute %s with value %s",attr,value);
+						//writefln("Got attribute %s with value %s",attr,value);
 						attr = "";
 						value = "";
 						// because of the way this is done, quoted attributes can be stacked with no whitespace
 						// even though it may not be in the spec to allow that
 						ats = 0;
 						continue;
-					} else {
-						// we have a quote in the WRONG place
+					// we have a quote in the WRONG place
+					} else if (ats == 1) {
 						// throw a malformed attribute exception
-						if (ats == 1) {
-							throw new XmlMalformedAttribute("Name",attr~x);
-						} else {
-							throw new XmlMalformedAttribute("Value",value~x);
-						}
+						throw new XmlMalformedAttribute("Name",attr~x);
+					// we have a quote in the WRONG place
+					} else if (ats == 3) {
+						throw new XmlMalformedAttribute("Value",value~x);
+					} else if (ats == 0) {
+						throw new XmlMalformedAttribute("Don't quote attribute names...","");
+					// 
+					} else {
+						value ~= x;
+						continue;
 					}
 				}
 				// cover the transition from attribute name to value
@@ -398,7 +408,7 @@ class XmlNode
 					ats = 3;
 					continue;
 				}
-				if (ats == 3 || ats == 4) {
+				if (ats == 3 || ats == 4 || ats == 5) {
 					value ~= x;
 					continue;
 				}
@@ -411,7 +421,7 @@ class XmlNode
 			if (ats == 3) {
 				// we have an unquoted value that happened to be the last attribute, so add it
 				newnode.setAttribute(attr,value);
-				writefln("Got attribute %s with value %s",attr,value);
+				//writefln("Got attribute %s with value %s",attr,value);
 			}
 			if (ats == 4) {
 				// great...an unterminated quote
@@ -431,7 +441,7 @@ class XmlNode
 				}
 				// since everything has returned successfully so far, try to parse out my closing tag
 				// if we can find the closing tag, that means we can add our node to the parent and finish with this
-				if (auto k = std.regexp.search(ret, "^</"~name~">")) {
+				if (auto k = std.regexp.search(ret, "^</"~name~">","")) {
 					parent.addChild(newnode);
 					ret = k.post;
 				} else {
@@ -455,14 +465,14 @@ class XmlNode
 		if (xsrc[0] == '<') {
 			return ret;
 		}
-		if (auto m = std.regexp.search(xsrc, "^.*?<")) {
+		if (auto m = std.regexp.search(xsrc, "^.*?<","")) {
 			xsrc = "<"~m.post;
 			ret =  m.match(0)[0..m.match(0).length-1];
-			writefln("Stripped %s off the front leaving: %s",ret,xsrc);
+			//writefln("Stripped %s off the front",ret);
 		} else {
 			ret = xsrc;
 			xsrc.length = 0;
-			writefln("all cdata: "~ret);
+			//writefln("all cdata: "~ret);
 		}
 		return ret;
 	}
