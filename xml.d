@@ -120,6 +120,9 @@ class XmlNode
 			return xmlEncode(_cdata);
 		}
 
+		protected override char[] write(char[]indent) {
+			return indent~printCompact()~"\n";
+		}
 	}
 
 	static this()
@@ -264,6 +267,22 @@ class XmlNode
 			tmp ~= asCloseTag();
 		}
 		return tmp;
+	}
+
+	char[] write(char[]indent="") {
+		char[]tmp = indent~asOpenTag()~"\n";
+
+		if (_children.length)
+		{
+			for (int i = 0; i < _children.length; i++)
+			{
+				// these guys are supposed to do their own indentation
+				tmp ~= _children[i].write(indent~"	"); 
+			}
+			tmp ~= indent~asCloseTag()~"\n";
+		}
+		return tmp;
+	
 	}
 
 	void addChildren(char[]xsrc) {
