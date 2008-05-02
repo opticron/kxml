@@ -461,13 +461,13 @@ class XmlNode
 				// since everything has returned successfully so far, try to parse out my closing tag
 				// if we can find the closing tag, that means we can add our node to the parent and finish with this
 				if (auto k = std.regexp.search(ret, "^</"~name~">","")) {
-					parent.addChild(newnode);
 					ret = k.post;
 				} else {
 					// throw a missing closing tag exception
 					throw new XmlMissingEndTag(name);
 				}
 			}
+			parent.addChild(newnode);
 			eatWhiteSpace(ret);
 			return ret;
 		} else {
