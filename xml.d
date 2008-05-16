@@ -304,58 +304,57 @@ class XmlNode
 		}
 		char[] cdata = stripText(xsrc);
 		if (cdata.length){
-			//writefln("I found cdata text: "~cdata);
+			debug(xml)writefln("I found cdata text: "~cdata);
 			parent.addCdata(cdata);
 			return xsrc;
 		}
 		eatWhiteSpace(xsrc);
-		//writefln(xsrc[0..51]);
 		// look for a closing tag to see if we're done
 		if (auto m = std.regexp.search(xsrc, "^</.*?>","")) {
-			//writefln("I found a closing tag (yikes):%s!",m.match(0));
+			debug(xml)writefln("I found a closing tag (yikes):%s!",m.match(0));
 			throw new XmlCloseTag();
 		}
 		// look for a *REAL* cdata tag
 		if (auto m = std.regexp.search(xsrc, "^<!\\[CDATA\\[.*?\\]\\]>","")) {
 			cdata = m.match(0)[9..m.match(0).length-3];
-			//writefln("I found a cdata tag: %s",cdata);
+			debug(xml)writefln("I found a cdata tag: %s",cdata);
 			parent.addCdata(cdata);
 			return m.post;
 		}
 		// look for processing instructions
 		if (auto m = std.regexp.search(xsrc, "^<\\?.*?\\?>","")) {
-			//writefln("I found a processing instruction: "~m.match(0));
+			debug(xml)writefln("I found a processing instruction: "~m.match(0));
 			return m.post;
 		}
 		// look for comments or other xml instructions
 		if (auto m = std.regexp.search(xsrc, "^<!.*?>","")) {
-			//writefln("I found a XML instruction!");
+			debug(xml)writefln("I found a XML instruction!");
 			return m.post;
 		}
 		if (auto m = std.regexp.search(xsrc, "^<.*?>","")) {
-			//writefln("I found a XML tag: "~m.match(0));
+			debug(xml)writefln("I found a XML tag: "~m.match(0));
 			char[]contents=m.match(0);
 			contents = contents[1..contents.length-1];
-			//writefln("Tag Contents: "~contents);
+			debug(xml)writefln("Tag Contents: "~contents);
 			// check for self-closing tag
 			bool selfclosing = false;
 			if (contents[contents.length-1] == '/') {
 				// strip off the trailing / and go about business as normal
 				contents = contents[0..contents.length-1];
 				selfclosing = true;
-				//writefln("self-closing tag!");
+				debug(xml)writefln("self-closing tag!");
 			}
 			char[]name = getNextToken(contents);
-			//writefln("It was a "~name~" tag!");
+			debug(xml)writefln("It was a "~name~" tag!");
 			eatWhiteSpace(contents);
-			//writefln("Attributes: "~contents);
+			debug(xml)writefln("Attributes: "~contents);
 			XmlNode newnode = new XmlNode(name);
 			// ats is a fun variable (attribute status) 0=nothing,1=attr,2=trans,3=value,4=double quoting,5=single quoting
 			int ats = 0;
 			char[]attr = "";
 			char[]value = "";
 			foreach (char x;contents) {
-				//writefln("Got character "~x);
+				//debug(xml)writefln("Got character "~x);
 				// be warned, even though commented, this logic flow is ugly and probably needs to be redone
 				// check for the quote escape
 				if (x == '\\') {
@@ -370,7 +369,7 @@ class XmlNode
 					if (ats == 3) {
 						// just finished a nonquoted attribute value
 						newnode.setAttribute(attr,value);
-						//writefln("Got attribute %s with value %s",attr,value);
+						debug(xml)writefln("Got attribute %s with value %s",attr,value);
 						attr = "";
 						value = "";
 						ats = 0;
@@ -379,20 +378,20 @@ class XmlNode
 						// throw a malformed attribute exception
 						throw new XmlMalformedAttribute("Name",attr);
 					}
-					//writefln("Whitespace between attributes!");
+					debug(xml)writefln("Whitespace between attributes!");
 					continue;
 				}
 				if (x == '"' || x == '\'') {
 					int tmp = (x=='"'?4:5);
 					// jump onto a quoted value
 					if (ats == 2) {
-						//writefln("began a quoted value!");
+						//debug(xml)writefln("began a quoted value!");
 						ats = tmp;
 						continue;
 					} else if (ats == tmp) {
 						// we just finished a quoting section which means that we have a properly formed attribute
 						newnode.setAttribute(attr,value);
-						//writefln("Got attribute %s with value %s",attr,value);
+						debug(xml)writefln("Got attribute %s with value %s",attr,value);
 						attr = "";
 						value = "";
 						// because of the way this is done, quoted attributes can be stacked with no whitespace
@@ -416,13 +415,13 @@ class XmlNode
 				}
 				// cover the transition from attribute name to value
 				if (ats == 1 && x == '=') {
-					//writefln("found end of attribute name!");
+					debug(xml)writefln("found end of attribute name!");
 					ats = 2;
 					continue;
 				}
 				// come off the transition onto the unquoted value
 				if (ats == 2) {
-					//writefln("found beginning of unquoted attribute value!");
+					debug(xml)writefln("found beginning of unquoted attribute value!");
 					value ~= x;
 					ats = 3;
 					continue;
@@ -440,7 +439,7 @@ class XmlNode
 			if (ats == 3) {
 				// we have an unquoted value that happened to be the last attribute, so add it
 				newnode.setAttribute(attr,value);
-				//writefln("Got attribute %s with value %s",attr,value);
+				debug(xml)writefln("Got attribute %s with value %s",attr,value);
 			}
 			if (ats == 4) {
 				// great...an unterminated quote
@@ -484,14 +483,14 @@ class XmlNode
 		if (xsrc[0] == '<') {
 			return ret;
 		}
-		if (auto m = std.regexp.search(xsrc, "^.*?<","")) {
+		if (auto m = std.regexp.search(xsrc, "^.*?<")) {
 			xsrc = "<"~m.post;
 			ret =  m.match(0)[0..m.match(0).length-1];
-			//writefln("Stripped %s off the front",ret);
+			debug(xml)writefln("Stripped %s off the front",ret);
 		} else {
 			ret = xsrc;
 			xsrc.length = 0;
-			//writefln("all cdata: "~ret);
+			debug(xml)writefln("all cdata: "~ret);
 		}
 		return ret;
 	}
