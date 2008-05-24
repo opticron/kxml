@@ -6,9 +6,6 @@
  * Xml contains functions and classes for reading, parsing, and writing xml
  * documents.
  *
- * It might eventually be good to rewrite this to throw Exceptions on any parse
- * errors--it already catches some.
- *
  * History:
  * Most of the code in this module originally came from Andy Friesen's Xmld.
  * Xmld was unmaintained, but Andy had placed it in the public domain.  This 
@@ -18,19 +15,16 @@
 
 module KXML.xml;
 
-import std.stream;
 import std.string;
-import std.regexp;
 import std.stdio;
 
 /**
- * Read an entire stream into a tree of XmlNodes.
+ * Read an entire string into a tree of XmlNodes.
  * Example:
  * --------------------------------
  * XmlNode xml;
- * File file = new File(source, FileMode.In);
- * xml = readDocument(file);
- * file.close();
+ * char[]xmlstring = "<node attr="self closing"/>";
+ * xml = readDocument(xmlstring);
  * --------------------------------*/
 XmlNode readDocument(char[]src)
 {
