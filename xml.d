@@ -85,35 +85,64 @@ class XmlCloseTag : XmlError
  * --------------------------------*/
 class XmlNode
 {
-    protected char[] _name;
-    protected char[][char[]] _attributes;
-    protected XmlNode[]      _children;
+	protected char[] _name;
+	protected char[][char[]] _attributes;
+	protected XmlNode[]      _children;
 
-    /// A specialialized XmlNode for CData.
+	/// A specialialized XmlNode for CData.
 	class CData : XmlNode
 	{
 		private char[] _cdata;
 
-		this(char[] cdata)
-		{	_cdata = xmlDecode(cdata);
+		this(char[] cdata) {
+			_cdata = xmlDecode(cdata);
 		}
 
-		bool isCData()
-		{	return true;
+		bool isCData() {
+			return true;
 		}
 
-		char[] getCData()
-		{	return _cdata;
+		char[] getCData() {
+			return _cdata;
 		}
 
-		protected override char[] toString()
-		{
+		protected override char[] toString() {
 			return xmlEncode(_cdata);
 		}
 
 		protected override char[] write(char[]indent) {
 			return indent~toString()~"\n";
 		}
+	}
+
+	/// A specialialized XmlNode for xml instructions.
+	class XmlI : XmlNode {
+		bool isXmlI() {
+			return true;
+		}
+
+		protected override char[] toString() {
+			return asOpenTag();
+		}
+	
+		protected override char[] write(char[]indent="") {
+			return indent~asOpenTag()~"\n";
+		}
+		protected char[] asOpenTag() {
+			if (_name.length == 0) {
+				return "";
+			}
+			char[] s = "<?" ~ _name ~ genAttrString() ~ "?>";
+			return s;
+		}
+	}
+
+	protected char[] genAttrString() {
+		char[]ret;
+		foreach (keys,values;_attributes) {
+				ret ~= " " ~ keys ~ "=\"" ~ values ~ "\"";
+		}
+		return ret;
 	}
 
 	static this(){}
@@ -207,14 +236,7 @@ class XmlNode
 		if (_name.length == 0) {
 			return "";
 		}
-		char[] s = "<" ~ _name;
-
-		if (_attributes.length > 0)
-		{	char[][] k = _attributes.keys;
-			char[][] v = _attributes.values;
-			for (int i = 0; i < _attributes.length; i++)
-				s ~= " " ~ k[i] ~ "=\"" ~ v[i] ~ "\"";
-		}
+		char[] s = "<" ~ _name ~ genAttrString();
 
 		if (_children.length == 0)
 			s ~= " /"; // We want <blah /> if the node has no children.
