@@ -89,53 +89,6 @@ class XmlNode
 	protected char[][char[]] _attributes;
 	protected XmlNode[]      _children;
 
-	/// A specialialized XmlNode for CData.
-	class CData : XmlNode
-	{
-		private char[] _cdata;
-
-		this(char[] cdata) {
-			_cdata = xmlDecode(cdata);
-		}
-
-		bool isCData() {
-			return true;
-		}
-
-		char[] getCData() {
-			return _cdata;
-		}
-
-		protected override char[] toString() {
-			return xmlEncode(_cdata);
-		}
-
-		protected override char[] write(char[]indent) {
-			return indent~toString()~"\n";
-		}
-	}
-
-	/// A specialialized XmlNode for xml instructions.
-	class XmlI : XmlNode {
-		bool isXmlI() {
-			return true;
-		}
-
-		protected override char[] toString() {
-			return asOpenTag();
-		}
-	
-		protected override char[] write(char[]indent="") {
-			return indent~asOpenTag()~"\n";
-		}
-		protected char[] asOpenTag() {
-			if (_name.length == 0) {
-				return "";
-			}
-			char[] s = "<?" ~ _name ~ genAttrString() ~ "?>";
-			return s;
-		}
-	}
 
 	protected char[] genAttrString() {
 		char[]ret;
@@ -232,6 +185,10 @@ class XmlNode
 		return false;
 	}
 
+	bool isXmlPI() {
+		return false;
+	}
+
 	protected char[] asOpenTag() {
 		if (_name.length == 0) {
 			return "";
@@ -323,7 +280,16 @@ class XmlNode
 			}
 		// look for processing instructions
 		} else if (toktype == procinst) {
-			debug(xml)writefln("I found a processing instruction: "~token);
+			// all processing instructions are leaf nodes, which makes things a bit more simple than regular nodes
+			// strip off the tokens that identify a xml PI node
+			token = token[2..$-2];
+			char[]name = getWSToken(token);
+			debug(xml)writefln("Got a "~name~" XML processing instruction");
+			XmlPI newnode = new XmlPI(name);
+			eatWhiteSpace(token);
+			debug(xml)writefln("Attributes: "~token);
+			parseAttributes(newnode,token);
+			parent.addChild(newnode);
 		// look for comments or other xml instructions
 		} else if (toktype == xmlinst) {
 			debug(xml)writefln("I found a XML instruction!");
@@ -570,6 +536,60 @@ class XmlNode
 		}
 	}
 }
+
+// class specializations for different types of nodes, such as cdata and instructions
+// A node type for CData.
+class CData : XmlNode
+{
+	private char[] _cdata;
+
+	this(char[] cdata) {
+		_cdata = xmlDecode(cdata);
+	}
+
+	override bool isCData() {
+		return true;
+	}
+
+	char[] getCData() {
+		return _cdata;
+	}
+
+	protected override char[] toString() {
+		return xmlEncode(_cdata);
+	}
+
+	protected override char[] write(char[]indent) {
+		return indent~toString()~"\n";
+	}
+}
+
+// A node type for xml instructions.
+class XmlPI : XmlNode {
+	this(char[]name) {
+		super(name);
+	}
+
+	override bool isXmlPI() {
+		return true;
+	}
+
+	protected override char[] toString() {
+		return asOpenTag();
+	}
+
+	protected override char[] write(char[]indent="") {
+		return indent~asOpenTag()~"\n";
+	}
+	protected char[] asOpenTag() {
+		if (_name.length == 0) {
+			return "";
+		}
+		char[] s = "<?" ~ _name ~ genAttrString() ~ "?>";
+		return s;
+	}
+}
+
 
 /// Encode characters such as &, <, >, etc. as their xml/html equivalents
 char[] xmlEncode(char[] src)
