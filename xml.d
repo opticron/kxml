@@ -354,41 +354,58 @@ class XmlNode
 		}
 		if (xsrc[0] != '<') {
 			token = readUntil(xsrc,"<");
-			// replace the delimiter that was removed if there's anything left
-			if (xsrc.length) {
-				xsrc = "<"~xsrc;
-			}
 			return pcdata;
 		// types of tags, gotta make sure we find the closing > (or ]]> in the case of ucdata)
 		} else if (xsrc[1] == '/') {
 			// closing tag!
 			token = readUntil(xsrc,">");
+			if (!xsrc.length || xsrc[0] != '>') {
+				return notoken;
+			}
+			xsrc = xsrc[1..$];
 			token ~= ">";
 			return ctag;
 		} else if (xsrc[1] == '?') {
 			// processing instruction!
 			token = readUntil(xsrc,"?>");
+			if (!xsrc.length || xsrc[0..2].cmp("?>") != 0) {
+				return notoken;
+			}
+			xsrc = xsrc[2..$];
 			token ~= "?>";
 			return procinst;
 		// 12 is the magic number that allows for the empty cdata string ![CDATA[]]>
 		} else if (xsrc.length >= 12 && xsrc[1..9].cmp("![CDATA[") == 0) {
 			// unparsed cdata!
 			token = readUntil(xsrc,"]]>");
+			if (!xsrc.length || xsrc[0..3].cmp("]]>") != 0) {
+				return notoken;
+			}
+			xsrc = xsrc[3..$];
 			token ~= "]]>";
 			return ucdata;
 		} else if (xsrc[1] == '!') {
 			// xml instruction!
 			token = readUntil(xsrc,">");
+			if (!xsrc.length || xsrc[0] != '>') {
+				return notoken;
+			}
+			xsrc = xsrc[1..$];
 			token ~= ">";
 			return xmlinst;
 		} else {
 			// just a regular old tag
 			token = readUntil(xsrc,">");
+			if (!xsrc.length || xsrc[0] != '>') {
+				return notoken;
+			}
+			xsrc = xsrc[1..$];
 			token ~= ">";
 			return otag;
 		}
 	}
 
+	// read data until the delimiter is found, if found the delimiter is left on the first parameter
 	private char[]readUntil(inout char[]xsrc, char[]delim) {
 		// the -delim.length is partially optimization and partially avoiding jumping the array bounds
 		int i;
@@ -405,12 +422,8 @@ class XmlNode
 		// neither part actually gets the delimiter
 		// take care of the case where the delimiter isn't found
 		char[]token;
-		if (i == xsrc.length-delim.length && xsrc[$-delim.length..$].cmp(delim) != 0) {
-			// no delim found, so no token pulled
-			return "";
-		} 
 		token = xsrc[0..i];
-		xsrc = xsrc[i+delim.length..$];
+		xsrc = xsrc[i..$];
 		return token;
 	}
 
