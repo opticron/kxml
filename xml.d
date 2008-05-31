@@ -405,7 +405,7 @@ class XmlNode
 		// neither part actually gets the delimiter
 		// take care of the case where the delimiter isn't found
 		char[]token;
-		if (i == xsrc.length-delim.length) {
+		if (i == xsrc.length-delim.length && xsrc[$-delim.length..$].cmp(delim) != 0) {
 			// no delim found, so no token pulled
 			return "";
 		} 
