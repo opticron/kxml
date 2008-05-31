@@ -459,7 +459,7 @@ class XmlNode
 			// be warned, even though commented, this logic flow is ugly and probably needs to be redone
 			// it probably doesn't handle escape codes properly either....
 			// check for the quote escape
-			if (x == '\\') {
+			if (x == '\\' && ats != 4 && ats != 5) {
 				// why is there a backslash here?
 				if (ats == 3) {
 					throw new XmlMalformedAttribute("Value",value~x);
@@ -480,14 +480,13 @@ class XmlNode
 					// throw a malformed attribute exception
 					throw new XmlMalformedAttribute("Name",attr);
 				}
-				//writefln("Whitespace between attributes!");
 				continue;
 			}
 			if (x == '"' || x == '\'') {
 				int tmp = (x=='"'?4:5);
 				// jump onto a quoted value
 				if (ats == 2) {
-					//writefln("began a quoted value!");
+					debug(xml)writefln("began a quoted value!");
 					ats = tmp;
 					continue;
 				} else if (ats == tmp) {
