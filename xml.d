@@ -9,8 +9,8 @@
  * History:
  * Most of the code in this module originally came from Andy Friesen's Xmld.
  * Xmld was unmaintained, but Andy had placed it in the public domain.  This 
- * code builds off that base and remains nearly API compatible with it's later
- * Yage branch.
+ * code builds off the Yage work to remain mostly API compatible, but the
+ * internal parser has been completely rewritten.
  */
 
 module KXML.xml;
@@ -181,10 +181,12 @@ class XmlNode
 		return this;
 	}
 
+	// this should be done with casting tests
 	bool isCData() {
 		return false;
 	}
 
+	// this should be done with casting tests
 	bool isXmlPI() {
 		return false;
 	}
@@ -431,6 +433,7 @@ class XmlNode
 		return token;
 	}
 
+	// basically to get the name off of open tags
 	private char[]getWSToken(inout char[]input) {
 		eatWhiteSpace(input);
 		char[]ret = "";
@@ -441,12 +444,14 @@ class XmlNode
 		return ret;
 	}
 
+	// eats tabs, newlines, and spaces until the next normal character
 	private void eatWhiteSpace(inout char[]input) {
 		while (input.length > 0 && isWhiteSpace(input[0])) {
 			input = input[1..input.length];
 		}
 	}
 
+	// lets you know if the character is a whitespace character
 	private int isWhiteSpace(char checkspace) {
 		if (checkspace == '\u0020' || checkspace == '\u0009' || checkspace == '\u000A' || checkspace == '\u000D') {
 			return 1;
