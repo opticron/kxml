@@ -354,6 +354,7 @@ class XmlNode
 		ctag
 	};
 	// this grabs the next token, being either unparsed cdata, parsed cdata, an xml or processing instruction, or a normal tag
+	// for performance reasons, this should spit out a fully formed xml node, should get a 1.5x speed increase
 	private int getXmlToken(inout char[] xsrc, inout char[] token) {
 		eatWhiteSpace(xsrc);
 		if (!xsrc.length) {
