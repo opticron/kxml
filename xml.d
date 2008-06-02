@@ -33,40 +33,40 @@ XmlNode readDocument(char[]src)
 	return root;
 }
 
-/// An exception thrown on an xml parsing error.
-class XmlError : Exception
-{	/// Throws an exception with the current line number and an error message.
-	this(char[] msg)
-	{	super(msg);
+// An exception thrown on an xml parsing error.
+class XmlError : Exception {
+	// Throws an exception with the current line number and an error message.
+	this(char[] msg) {
+		super(msg);
 	}
 }
 
-/// An exception thrown on an xml parsing error.
-class XmlMalformedAttribute : XmlError
-{	/// Throws an exception with the current line number and an error message.
-	this(char[]part,char[] msg)
-	{	super("Malformed Attribute " ~ part ~ ": " ~ msg ~ "\n");
+// An exception thrown on an xml parsing error.
+class XmlMalformedAttribute : XmlError {
+	/// Throws an exception with the current line number and an error message.
+	this(char[]part,char[] msg) {
+		super("Malformed Attribute " ~ part ~ ": " ~ msg ~ "\n");
 	}
 }
 /// An exception thrown on an xml parsing error.
-class XmlMalformedSubnode : XmlError
-{	/// Throws an exception with the current line number and an error message.
-	this(char[] name)
-	{	super("Malformed Subnode of " ~ name);
+class XmlMalformedSubnode : XmlError {
+	// Throws an exception with the current line number and an error message.
+	this(char[] name) {
+		super("Malformed Subnode of " ~ name);
 	}
 }
 /// An exception thrown on an xml parsing error.
-class XmlMissingEndTag : XmlError
-{	/// Throws an exception with the current line number and an error message.
-	this(char[] name)
-	{	super("Missing End Tag " ~ name ~ "\n");
+class XmlMissingEndTag : XmlError {
+	// Throws an exception with the current line number and an error message.
+	this(char[] name) {
+		super("Missing End Tag " ~ name ~ "\n");
 	}
 }
 /// An exception thrown on an xml parsing error.
-class XmlCloseTag : XmlError
-{	/// Throws an exception with the current line number and an error message.
-	this()
-	{	super("");
+class XmlCloseTag : XmlError {
+	// Throws an exception with the current line number and an error message.
+	this() {
+		super("");
 	}
 }
 
@@ -216,6 +216,7 @@ class XmlNode
 		return _children.length == 0;
 	}
 
+	// this is a dump of the xml structure to a string with no newlines and no linefeeds
 	char[] toString() {
 		char[]tmp = asOpenTag();
 
@@ -230,6 +231,7 @@ class XmlNode
 		return tmp;
 	}
 
+	// this is a dump of the xml structure in to pretty, tabbed format
 	char[] write(char[]indent="") {
 		char[]tmp = indent~asOpenTag()~"\n";
 
@@ -246,6 +248,7 @@ class XmlNode
 	
 	}
 
+	// add children from a character array containing xml
 	void addChildren(char[]xsrc) {
 		while (xsrc.length) {
 			// there may be multiple tag trees or cdata elements
@@ -253,7 +256,7 @@ class XmlNode
 		}
 	}
 
-	// returns everything after the first node tree (a node can be text as well)
+	// returns everything after the first node TREE (a node can be text as well)
 	private int parseNode(XmlNode parent,inout char[]xsrc) {
 		// if it was just whitespace and no more text or tags, make sure that's covered
 		if (!xsrc.length) {
@@ -292,7 +295,9 @@ class XmlNode
 			parent.addChild(newnode);
 		// look for comments or other xml instructions
 		} else if (toktype == xmlinst) {
+			// we don't do anything with xml instructions at the moment, so they're treated as comments
 			debug(xml)writefln("I found a XML instruction!");
+		// opening tags are caught here
 		} else if (toktype == otag) {
 			debug(xml)writefln("I found a XML tag: "~token);
 			token = token[1..$-1];
@@ -419,8 +424,7 @@ class XmlNode
 			return "";
 		}
 		// and now to split up the string
-		// neither part actually gets the delimiter
-		// take care of the case where the delimiter isn't found
+		// latter part of the string gets the delimiter
 		char[]token;
 		token = xsrc[0..i];
 		xsrc = xsrc[i..$];
@@ -450,6 +454,7 @@ class XmlNode
 		return 0;
 	}
 
+	// dont look at this code, it WILL hurt (i need to use an enum to make things prettier)
 	private void parseAttributes (XmlNode xml,char[]contents) {
 		// ats is a fun variable (attribute status) 0=nothing,1=attr,2=trans,3=value,4=double quoting,5=single quoting
 		int ats = 0;
