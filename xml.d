@@ -461,6 +461,7 @@ class XmlNode
 	}
 
 	// dont look at this code, it WILL hurt (i need to use an enum to make things prettier)
+	// this needs to be redone as I believe it is a significant part of what is causing the poor performance
 	private void parseAttributes (XmlNode xml,char[]contents) {
 		// ats is a fun variable (attribute status) 0=nothing,1=attr,2=trans,3=value,4=double quoting,5=single quoting
 		int ats = 0;
