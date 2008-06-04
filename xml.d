@@ -191,6 +191,15 @@ class XmlNode
 		return false;
 	}
 
+	// this makes life easier for those looking to pull cdata from tags that only have that as the single subnode
+	char[]getCData() {
+		if (_children.length && _children[0].isCData) {
+			return _children[0].getCData;
+		} else {
+			return "";
+		}
+	}
+
 	protected char[] asOpenTag() {
 		if (_name.length == 0) {
 			return "";
@@ -575,7 +584,7 @@ class CData : XmlNode
 		return true;
 	}
 
-	char[] getCData() {
+	override char[] getCData() {
 		return _cdata;
 	}
 
@@ -598,7 +607,10 @@ class XmlPI : XmlNode {
 		return true;
 	}
 
-	protected override char[] toString() {
+	override char[] getCData() {
+		return "";
+	}
+	override char[] toString() {
 		return asOpenTag();
 	}
 
