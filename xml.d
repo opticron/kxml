@@ -1,5 +1,5 @@
 /**
- * Copyright:  (c) 2008 William K. Moore, III
+ * Copyright:  (c) 2008 William K. Moore, III (opticron@the.narro.ws, I-MOD on IRC)
  * Authors:    Andy Friesen, William K. Moore, III
  * License:    <a href="lgpl.txt">LGPL</a>
  *
