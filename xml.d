@@ -474,15 +474,15 @@ class XmlNode
 	private void parseAttributes (XmlNode xml,char[]contents) {
 		enum {
 			whitespace=0,
-			name=1,
+			name,
 			// name/value transition (=)
-			nvtrans=2,
+			nvtrans,
 			// unquoted value
-			value=3,
+			value,
 			// double quoted value
-			dqval=4,
+			dqval,
 			// single quoted value
-			sqval=5
+			sqval
 		};
 		// ats is a fun variable (attribute status) 0=nothing,1=attr,2=trans,3=value,4=double quoting,5=single quoting
 		int ats = whitespace;
