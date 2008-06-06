@@ -484,25 +484,28 @@ class XmlNode
 			// single quoted value
 			sqval
 		};
-		// ats is a fun variable (attribute status) 0=nothing,1=attr,2=trans,3=value,4=double quoting,5=single quoting
+		// ats is our state machine (ats == attribute status)
 		int ats = whitespace;
+		int attrindex = 0;
+		int valindex = 0;
 		char[]attr = "";
 		char[]attrval = "";
-		foreach (char x;contents) {
+		foreach (int index,char x;contents) {
 			// be warned, even though commented, this logic flow is ugly and probably needs to be redone
 			// it probably doesn't handle escape codes properly either....
 			// check for the quote escape
 			if (x == '\\' && ats != dqval && ats != sqval) {
 				// why is there a backslash here?
 				if (ats == value) {
-					throw new XmlMalformedAttribute("Value",attrval~x);
+					throw new XmlMalformedAttribute("Value",contents[valindex..index]);
 				} else {
-					throw new XmlMalformedAttribute("Name",attr~x);
+					throw new XmlMalformedAttribute("Name",contents[attrindex..index]);
 				}
 			}
-			if (isWhiteSpace(x) && ats != dqval) {
+			if (isWhiteSpace(x) && ats != dqval && ats != sqval) {
 				if (ats == value) {
 					// just finished a nonquoted attribute value
+					attrval = contents[valindex..index];
 					xml.setAttribute(attr,attrval);
 					debug(xml)writefln("Got attribute %s with value %s",attr,attrval);
 					attr = "";
@@ -511,7 +514,7 @@ class XmlNode
 				} else if (ats != whitespace) {
 					// we have a problem here....a space in the middle of our attribute
 					// throw a malformed attribute exception
-					throw new XmlMalformedAttribute("Name",attr);
+					throw new XmlMalformedAttribute("Name",contents[attrindex..index]);
 				}
 				continue;
 			}
@@ -520,14 +523,14 @@ class XmlNode
 				// jump onto a quoted value
 				if (ats == nvtrans) {
 					debug(xml)writefln("began a quoted value!");
+					valindex = index+1;
 					ats = tmp;
 					continue;
 				} else if (ats == tmp) {
 					// we just finished a quoting section which means that we have a properly formed attribute
+					attrval = contents[valindex..index];
 					xml.setAttribute(attr,attrval);
 					debug(xml)writefln("Got attribute %s with value %s",attr,attrval);
-					attr = "";
-					attrval = "";
 					// because of the way this is done, quoted attributes can be stacked with no whitespace
 					// even though it may not be in the spec to allow that
 					ats = whitespace;
@@ -535,43 +538,37 @@ class XmlNode
 				// we have a quote in the WRONG place
 				} else if (ats == name) {
 					// throw a malformed attribute exception
-					throw new XmlMalformedAttribute("Name",attr~x);
+					throw new XmlMalformedAttribute("Name",contents[attrindex..index]);
 				// we have a quote in the WRONG place
 				} else if (ats == value) {
-					throw new XmlMalformedAttribute("Value",attrval~x);
+					throw new XmlMalformedAttribute("Value",contents[valindex..index]);
 				} else if (ats == whitespace) {
 					throw new XmlMalformedAttribute("Don't quote attribute names...","");
-				// 
-				} else {
-					attrval ~= x;
-					continue;
 				}
 			}
 			// cover the transition from attribute name to value
 			if (ats == name && x == '=') {
-				//writefln("found end of attribute name!");
+				// this effectively ends the attribute name for all cases, i.e. easy
+				attr = contents[attrindex..index];
 				ats = nvtrans;
 				continue;
 			}
 			// come off the transition onto the unquoted value
 			if (ats == nvtrans) {
 				//writefln("found beginning of unquoted attribute value!");
-				attrval ~= x;
+				valindex = index;
 				ats = value;
 				continue;
 			}
-			if (ats == value || ats == dqval || ats == sqval) {
-				attrval ~= x;
-				continue;
-			}
-			if (ats == name || (!isWhiteSpace(x) && ats == whitespace)) {
+			if (!isWhiteSpace(x) && ats == whitespace) {
+				attrindex = index;
 				ats = name;
-				attr ~= x;
 				continue;
 			}
 		}
 		if (ats == value) {
 			// we have an unquoted value that happened to be the last attribute, so add it
+			attrval = contents[valindex..$];
 			xml.setAttribute(attr,attrval);
 			debug(xml)writefln("Got attribute %s with value %s",attr,attrval);
 		}
