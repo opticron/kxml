@@ -472,31 +472,43 @@ class XmlNode
 	// dont look at this code, it WILL hurt (i need to use an enum to make things prettier)
 	// this needs to be redone as I believe it is a significant part of what is causing the poor performance
 	private void parseAttributes (XmlNode xml,char[]contents) {
+		enum {
+			whitespace=0,
+			name=1,
+			// name/value transition (=)
+			nvtrans=2,
+			// unquoted value
+			value=3,
+			// double quoted value
+			dqval=4,
+			// single quoted value
+			sqval=5
+		};
 		// ats is a fun variable (attribute status) 0=nothing,1=attr,2=trans,3=value,4=double quoting,5=single quoting
-		int ats = 0;
+		int ats = whitespace;
 		char[]attr = "";
-		char[]value = "";
+		char[]attrval = "";
 		foreach (char x;contents) {
 			// be warned, even though commented, this logic flow is ugly and probably needs to be redone
 			// it probably doesn't handle escape codes properly either....
 			// check for the quote escape
-			if (x == '\\' && ats != 4 && ats != 5) {
+			if (x == '\\' && ats != dqval && ats != sqval) {
 				// why is there a backslash here?
-				if (ats == 3) {
-					throw new XmlMalformedAttribute("Value",value~x);
+				if (ats == value) {
+					throw new XmlMalformedAttribute("Value",attrval~x);
 				} else {
 					throw new XmlMalformedAttribute("Name",attr~x);
 				}
 			}
-			if (isWhiteSpace(x) && ats != 4) {
-				if (ats == 3) {
+			if (isWhiteSpace(x) && ats != dqval) {
+				if (ats == value) {
 					// just finished a nonquoted attribute value
-					xml.setAttribute(attr,value);
-					debug(xml)writefln("Got attribute %s with value %s",attr,value);
+					xml.setAttribute(attr,attrval);
+					debug(xml)writefln("Got attribute %s with value %s",attr,attrval);
 					attr = "";
-					value = "";
-					ats = 0;
-				} else if (ats != 0) {
+					attrval = "";
+					ats = whitespace;
+				} else if (ats != whitespace) {
 					// we have a problem here....a space in the middle of our attribute
 					// throw a malformed attribute exception
 					throw new XmlMalformedAttribute("Name",attr);
@@ -504,68 +516,72 @@ class XmlNode
 				continue;
 			}
 			if (x == '"' || x == '\'') {
-				int tmp = (x=='"'?4:5);
+				int tmp = (x=='"'?dqval:sqval);
 				// jump onto a quoted value
-				if (ats == 2) {
+				if (ats == nvtrans) {
 					debug(xml)writefln("began a quoted value!");
 					ats = tmp;
 					continue;
 				} else if (ats == tmp) {
 					// we just finished a quoting section which means that we have a properly formed attribute
-					xml.setAttribute(attr,value);
-					debug(xml)writefln("Got attribute %s with value %s",attr,value);
+					xml.setAttribute(attr,attrval);
+					debug(xml)writefln("Got attribute %s with value %s",attr,attrval);
 					attr = "";
-					value = "";
+					attrval = "";
 					// because of the way this is done, quoted attributes can be stacked with no whitespace
 					// even though it may not be in the spec to allow that
-					ats = 0;
+					ats = whitespace;
 					continue;
 				// we have a quote in the WRONG place
-				} else if (ats == 1) {
+				} else if (ats == name) {
 					// throw a malformed attribute exception
 					throw new XmlMalformedAttribute("Name",attr~x);
 				// we have a quote in the WRONG place
-				} else if (ats == 3) {
-					throw new XmlMalformedAttribute("Value",value~x);
-				} else if (ats == 0) {
+				} else if (ats == value) {
+					throw new XmlMalformedAttribute("Value",attrval~x);
+				} else if (ats == whitespace) {
 					throw new XmlMalformedAttribute("Don't quote attribute names...","");
 				// 
 				} else {
-					value ~= x;
+					attrval ~= x;
 					continue;
 				}
 			}
 			// cover the transition from attribute name to value
-			if (ats == 1 && x == '=') {
+			if (ats == name && x == '=') {
 				//writefln("found end of attribute name!");
-				ats = 2;
+				ats = nvtrans;
 				continue;
 			}
 			// come off the transition onto the unquoted value
-			if (ats == 2) {
+			if (ats == nvtrans) {
 				//writefln("found beginning of unquoted attribute value!");
-				value ~= x;
-				ats = 3;
+				attrval ~= x;
+				ats = value;
 				continue;
 			}
-			if (ats == 3 || ats == 4 || ats == 5) {
-				value ~= x;
+			if (ats == value || ats == dqval || ats == sqval) {
+				attrval ~= x;
 				continue;
 			}
-			if (ats == 1 || (!isWhiteSpace(x) && ats == 0)) {
-				ats = 1;
+			if (ats == name || (!isWhiteSpace(x) && ats == whitespace)) {
+				ats = name;
 				attr ~= x;
 				continue;
 			}
 		}
-		if (ats == 3) {
+		if (ats == value) {
 			// we have an unquoted value that happened to be the last attribute, so add it
-			xml.setAttribute(attr,value);
-			debug(xml)writefln("Got attribute %s with value %s",attr,value);
+			xml.setAttribute(attr,attrval);
+			debug(xml)writefln("Got attribute %s with value %s",attr,attrval);
 		}
-		if (ats == 4) {
+		if (ats == dqval || ats == sqval) {
 			// great...an unterminated quote
-			throw new XmlMalformedAttribute("Value",value);
+			throw new XmlMalformedAttribute("Value",attrval);
+		}
+		if (ats == nvtrans || ats == name) {
+			// a name with no value...seriously, who does that?
+			throw new XmlMalformedAttribute("Name with no value","");
 		}
 	}
 }
