@@ -158,24 +158,35 @@ class XmlNode
 		return setAttribute(name, std.string.toString(value));
 	}
 
-	/// Remove the attribute with name.
+	// Remove the attribute with name.
 	XmlNode removeAttribute(char[] name) {
 		_attributes.remove(name);
 		return this;
 	}
 
-	/// Add an XmlNode child.
+	// Add an XmlNode child.
 	XmlNode addChild(XmlNode newNode) {
 		_children ~= newNode;
 		return this;
 	}
 
-	/// Return an array of all child XmlNodes.
+	// Return an array of all child XmlNodes.
 	XmlNode[] getChildren() {
 		return _children;
 	}
 
-	/// Add a child Node of cdata (text).
+	// remove the child with the same reference as what was given, returns the number of children removed
+	int removeChild(XmlNode remove) {
+		int len = _children.length;
+		for (int i = 0;i<_children.length;i++) if (_children[i] is remove) {
+			// we matched it, so remove it
+			// don't return true yet, since we're removing all references to it, not just the first one
+			_children = _children[0..i]~_children[i+1..$];
+		}
+		return len - _children.length;
+	}
+
+	// Add a child Node of cdata (text).
 	XmlNode addCdata(char[] cdata) {
 		addChild(new CData(cdata));
 		return this;
@@ -340,6 +351,7 @@ class XmlNode
 					throw new XmlMalformedSubnode(name~"\n"~e.toString());
 				}
 				// make sure we found our closing tag
+				// this is where we can get sloppy for stream parsing
 				if (!ret) {
 					// throw a missing closing tag exception
 					throw new XmlMissingEndTag(name);
