@@ -100,38 +100,39 @@ class XmlNode
 
 	static this(){}
 
-	/// Construct an empty XmlNode.
+	// Construct an empty XmlNode.
 	this(){}
 
-	/// Construct and set the name of this XmlNode to name.
+	// Construct and set the name of this XmlNode to name.
 	this(char[] name) {
 		_name = name;
 	}
 
-	/// Get the name of this XmlNode.
+	// Get the name of this XmlNode.
 	char[] getName() {
 		return _name;
 	}
 
-	/// Set the name of this XmlNode.
+	// Set the name of this XmlNode.
 	void setName(char[] newName) {
 		_name = newName;
 	}
 
-	/// Does this XmlNode have an attribute with name?
+	// Does this XmlNode have an attribute with name?
 	bool hasAttribute(char[] name) {
 		return (name in _attributes) !is null;
 	}
 
-	/// Get the attribute with name, or return null if no attribute has that name.
+	// Get the attribute with name, or return null if no attribute has that name.
 	char[] getAttribute(char[] name) {
 		if (name in _attributes)
-			return _attributes[name];
+			return xmlDecode(_attributes[name]);
 		else
 			return null;
 	}
 
-	/// Return an array of all attributes (by reference, no copy is made).
+	// Return an array of all attributes (by reference, no copy is made).
+	// the user should know that these may have html escapes
 	char[][char[]] getAttributes() {
 		return _attributes;
 	}
@@ -140,7 +141,7 @@ class XmlNode
 	 * Set an attribute to a string value.  The attribute is created if it
 	 * doesn't exist.*/
 	XmlNode setAttribute(char[] name, char[] value) {
-		_attributes[name] = value;
+		_attributes[name] = xmlEncode(value);
 		return this;
 	}
 
@@ -653,20 +654,22 @@ class XmlPI : XmlNode {
 
 
 /// Encode characters such as &, <, >, etc. as their xml/html equivalents
-char[] xmlEncode(char[] src)
-{   char[] tempStr;
+char[] xmlEncode(char[] src) {
+	char[] tempStr;
         tempStr = replace(src    , "&", "&amp;");
         tempStr = replace(tempStr, "<", "&lt;");
         tempStr = replace(tempStr, ">", "&gt;");
+        tempStr = replace(tempStr, "\"", "&quot;");
         return tempStr;
 }
 
 /// Convert xml-encoded special characters such as &amp;amp; back to &amp;.
-char[] xmlDecode(char[] src)
-{       char[] tempStr;
-        tempStr = replace(src    , "&amp;", "&");
-        tempStr = replace(tempStr, "&lt;",  "<");
+char[] xmlDecode(char[] src) {
+	char[] tempStr;
+        tempStr = replace(src    , "&lt;",  "<");
         tempStr = replace(tempStr, "&gt;",  ">");
+        tempStr = replace(tempStr, "&quot;",  "\"");
+        tempStr = replace(tempStr, "&amp;", "&");
         return tempStr;
 }
 
