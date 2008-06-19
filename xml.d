@@ -389,48 +389,49 @@ class XmlNode
 		} else if (xsrc[1] == '/') {
 			// closing tag!
 			token = readUntil(xsrc,">");
-			if (!xsrc.length || xsrc[0] != '>') {
-				return notoken;
+			// if we have more characters in xsrc, that means the token was found and we need to rip it off the string, then add it to the token
+			// otherwise, we should just return the token so the error gets caught in the parser :D
+			if (xsrc.length) {
+				xsrc = xsrc[1..$];
+				token ~= ">";
 			}
-			xsrc = xsrc[1..$];
-			token ~= ">";
 			return ctag;
 		} else if (xsrc[1] == '?') {
 			// processing instruction!
 			token = readUntil(xsrc,"?>");
-			if (!xsrc.length || xsrc[0..2].cmp("?>") != 0) {
-				return notoken;
+			// make sure any errors get caught in the parser
+			if (xsrc.length > 1) {
+				xsrc = xsrc[2..$];
+				token ~= "?>";
 			}
-			xsrc = xsrc[2..$];
-			token ~= "?>";
 			return procinst;
 		// 12 is the magic number that allows for the empty cdata string ![CDATA[]]>
 		} else if (xsrc.length >= 12 && xsrc[1..9].cmp("![CDATA[") == 0) {
 			// unparsed cdata!
 			token = readUntil(xsrc,"]]>");
-			if (!xsrc.length || xsrc[0..3].cmp("]]>") != 0) {
-				return notoken;
+			// make sure any errors get caught in the parser
+			if (xsrc.length > 2) {
+				xsrc = xsrc[3..$];
+				token ~= "]]>";
 			}
-			xsrc = xsrc[3..$];
-			token ~= "]]>";
 			return ucdata;
 		} else if (xsrc[1] == '!') {
 			// xml instruction!
 			token = readUntil(xsrc,">");
-			if (!xsrc.length || xsrc[0] != '>') {
-				return notoken;
+			// make sure any errors get caught in the parser
+			if (xsrc.length) {
+				xsrc = xsrc[1..$];
+				token ~= ">";
 			}
-			xsrc = xsrc[1..$];
-			token ~= ">";
 			return xmlinst;
 		} else {
 			// just a regular old tag
 			token = readUntil(xsrc,">");
-			if (!xsrc.length || xsrc[0] != '>') {
-				return notoken;
+			// make sure any errors get caught in the parser
+			if (xsrc.length) {
+				xsrc = xsrc[1..$];
+				token ~= ">";
 			}
-			xsrc = xsrc[1..$];
-			token ~= ">";
 			return otag;
 		}
 	}
