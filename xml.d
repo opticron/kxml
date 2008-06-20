@@ -13,7 +13,7 @@
  * internal parser has been completely rewritten.
  */
 
-module KXML.xml;
+module xml;
 
 import std.string;
 import std.stdio;
