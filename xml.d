@@ -289,6 +289,9 @@ class XmlNode
 		int toktype = getXmlToken(xsrc,token);
 		if (toktype == notoken) {
 			xsrc = "";
+		// ignore comments
+		} else if (toktype == comment) {
+			// do nothing, will return with 0 at the bottom
 		// take care of real cdata tags and plain text
 		} else if (toktype == pcdata || toktype == ucdata) {
 			if (toktype == ucdata) {
@@ -373,7 +376,8 @@ class XmlNode
 		xmlinst,
 		procinst,
 		otag,
-		ctag
+		ctag,
+		comment
 	};
 	// this grabs the next token, being either unparsed cdata, parsed cdata, an xml or processing instruction, or a normal tag
 	// for performance reasons, this should spit out a fully formed xml node, should get a 1.5x speed increase
@@ -415,6 +419,16 @@ class XmlNode
 				token ~= "]]>";
 			}
 			return ucdata;
+		// make sure we parse out comments, minimum length for this is 7 (<!---->)
+		} else if (xsrc.length >= 7 && xsrc[1..4].cmp("!--") == 0) {
+			// a comment...which will just get ignored later
+			token = readUntil(xsrc,"-->");
+			// make sure any errors get caught in the parser
+			if (xsrc.length > 2) {
+				xsrc = xsrc[3..$];
+				token ~= "-->";
+			}
+			return comment;
 		} else if (xsrc[1] == '!') {
 			// xml instruction!
 			token = readUntil(xsrc,">");
