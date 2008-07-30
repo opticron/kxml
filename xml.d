@@ -534,7 +534,7 @@ class XmlNode
 				if (ats == value) {
 					// just finished a nonquoted attribute value
 					attrval = contents[valindex..index];
-					xml.setAttribute(attr,attrval);
+					xml._attributes[attr] = attrval;
 					debug(xml)writefln("Got attribute %s with value %s",attr,attrval);
 					attr = "";
 					attrval = "";
@@ -557,7 +557,7 @@ class XmlNode
 				} else if (ats == tmp) {
 					// we just finished a quoting section which means that we have a properly formed attribute
 					attrval = contents[valindex..index];
-					xml.setAttribute(attr,attrval);
+					xml._attributes[attr] = attrval;
 					debug(xml)writefln("Got attribute %s with value %s",attr,attrval);
 					// because of the way this is done, quoted attributes can be stacked with no whitespace
 					// even though it may not be in the spec to allow that
@@ -597,7 +597,7 @@ class XmlNode
 		if (ats == value) {
 			// we have an unquoted value that happened to be the last attribute, so add it
 			attrval = contents[valindex..$];
-			xml.setAttribute(attr,attrval);
+			xml._attributes[attr] = attrval;
 			debug(xml)writefln("Got attribute %s with value %s",attr,attrval);
 		}
 		if (ats == dqval || ats == sqval) {
