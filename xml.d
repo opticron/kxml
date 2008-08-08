@@ -134,7 +134,12 @@ class XmlNode
 	// Return an array of all attributes (by reference, no copy is made).
 	// the user should know that these may have html escapes
 	char[][char[]] getAttributes() {
-		return _attributes;
+		char[][char[]]tmp;
+		// this is inefficient as it is run every time, but doesn't hurt parsing speed
+		foreach(key;_attributes.keys) {
+			tmp[key] = xmlDecode(_attributes[key]);
+		}
+		return tmp;
 	}
 
 	/**
