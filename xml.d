@@ -622,7 +622,7 @@ class XmlNode
 
 	XmlNode[]parseXPath(char[]xpath,bool caseSensitive = false) {
 		// rip off the leading / if it's there and we're not looking for a deep path
-		if (!isDeepPath(xpath) && xpath[0] == '/') xpath = xpath[1..$];
+		if (!isDeepPath(xpath) && xpath.length && xpath[0] == '/') xpath = xpath[1..$];
 		char[]truncxpath;
 		char[]nextnode = getNextNode(xpath,truncxpath);
 		char[]attrmatch = "";
@@ -632,14 +632,17 @@ class XmlNode
 			attrmatch = nextnode[offset..$];
 			nextnode = nextnode[0..offset];
 		}
+		debug(xpath) writefln("Looking for %s",nextnode);
 		XmlNode[]retarr;
 		// search through the children to see if we have a direct match on the next node
 		if (!nextnode.length) {
 			// we were searching for nodes, and this is one
+			debug(xpath) writefln("Found a node we want! name is: %s",getName);
 			retarr ~= this;
 		} else foreach(child;getChildren) {
 			if ((caseSensitive && child.getName == nextnode) || (!caseSensitive && !child.getName().icmp(nextnode))) {
 				// child that matches the search string, pass on the truncated string
+				debug(xpath) writefln("Sending %s to %s",truncxpath,child.getName);
 				retarr ~= child.parseXPath(truncxpath,caseSensitive);
 			}
 		}
