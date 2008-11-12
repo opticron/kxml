@@ -198,6 +198,11 @@ class XmlNode
 		return this;
 	}
 
+	// make an alias so as not to break compatibility
+	XmlNode addCData(char[] cdata) {
+		return addCdata(cdata);
+	}
+
 	// this should be done with casting tests
 	bool isCData() {
 		return false;
@@ -613,6 +618,61 @@ class XmlNode
 			// a name with no value...seriously, who does that?
 			throw new XmlMalformedAttribute("Name with no value","");
 		}
+	}
+
+	XmlNode[]parseXPath(char[]xpath,bool caseSensitive = false) {
+		// rip off the leading / if it's there and we're not looking for a deep path
+		if (!isDeepPath(xpath) && xpath[0] == '/') xpath = xpath[1..$];
+		char[]truncxpath;
+		char[]nextnode = getNextNode(xpath,truncxpath);
+		char[]attrmatch = "";
+		int offset = nextnode.find('[');
+		if (offset != -1) {
+			// XXX Implement attribute matching
+			attrmatch = nextnode[offset..$];
+			nextnode = nextnode[0..offset];
+		}
+		XmlNode[]retarr;
+		// search through the children to see if we have a direct match on the next node
+		if (!nextnode.length) {
+			// we were searching for nodes, and this is one
+			retarr ~= this;
+		} else foreach(child;getChildren) {
+			if ((caseSensitive && child.getName == nextnode) || (!caseSensitive && !child.getName().icmp(nextnode))) {
+				// child that matches the search string, pass on the truncated string
+				retarr ~= child.parseXPath(truncxpath,caseSensitive);
+			}
+		}
+		// we aren't on us, but check to see if we're looking for a deep path, and delve in accordingly
+		// currently this means, the entire tree could be traversed multiple times for a single query...eww
+		// and the query // should generate a list of the entire tree, in the order the elements specifically appear
+		if (isDeepPath(xpath)) foreach(child;getChildren) {
+			// throw the exact same xpath at each child
+			retarr ~= child.parseXPath(xpath,caseSensitive);
+		}
+		return retarr;
+	}
+	
+	bool isDeepPath(char[]xpath) {
+		// check to see if we're currently searching a deep path
+		if (xpath.length > 1 && xpath[0..1] == "//") {
+			return true;
+		}
+		return false;
+	}
+
+	// this does not modify the incoming string, only pulls a slice out of it
+	char[]getNextNode(char[]xpath,out char[]truncxpath) {
+		if (isDeepPath(xpath)) xpath = xpath[2..$];
+		char[][]nodes = std.string.split(xpath,"/");
+		if (nodes.length) {
+			// leading slashes will be removed in recursive calls 
+			if (nodes.length > 1) truncxpath = xpath[nodes[0].length..$];
+			return nodes[0];
+		}
+		// i'm not sure this can occur unless the string was blank to begin with...
+		truncxpath = "";
+		return "";
 	}
 }
 
