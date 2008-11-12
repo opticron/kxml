@@ -623,6 +623,7 @@ class XmlNode
 	XmlNode[]parseXPath(char[]xpath,bool caseSensitive = false) {
 		// rip off the leading / if it's there and we're not looking for a deep path
 		if (!isDeepPath(xpath) && xpath.length && xpath[0] == '/') xpath = xpath[1..$];
+		debug(xpath) writefln("Got xpath %s in node %s",xpath,getName);
 		char[]truncxpath;
 		char[]nextnode = getNextNode(xpath,truncxpath);
 		char[]attrmatch = "";
@@ -631,6 +632,7 @@ class XmlNode
 			// XXX Implement attribute matching
 			attrmatch = nextnode[offset..$];
 			nextnode = nextnode[0..offset];
+			debug(xpath) writefln("Ignoring attribute chunk: %s\n",attrmatch);
 		}
 		debug(xpath) writefln("Looking for %s",nextnode);
 		XmlNode[]retarr;
@@ -639,7 +641,7 @@ class XmlNode
 			// we were searching for nodes, and this is one
 			debug(xpath) writefln("Found a node we want! name is: %s",getName);
 			retarr ~= this;
-		} else foreach(child;getChildren) {
+		} else foreach(child;getChildren) if (!child.isCData) {
 			if ((caseSensitive && child.getName == nextnode) || (!caseSensitive && !child.getName().icmp(nextnode))) {
 				// child that matches the search string, pass on the truncated string
 				debug(xpath) writefln("Sending %s to %s",truncxpath,child.getName);
@@ -649,7 +651,7 @@ class XmlNode
 		// we aren't on us, but check to see if we're looking for a deep path, and delve in accordingly
 		// currently this means, the entire tree could be traversed multiple times for a single query...eww
 		// and the query // should generate a list of the entire tree, in the order the elements specifically appear
-		if (isDeepPath(xpath)) foreach(child;getChildren) {
+		if (isDeepPath(xpath)) foreach(child;getChildren) if (!child.isCData) {
 			// throw the exact same xpath at each child
 			retarr ~= child.parseXPath(xpath,caseSensitive);
 		}
@@ -658,7 +660,7 @@ class XmlNode
 	
 	bool isDeepPath(char[]xpath) {
 		// check to see if we're currently searching a deep path
-		if (xpath.length > 1 && xpath[0..1] == "//") {
+		if (xpath.length > 1 && xpath[0..2] == "//") {
 			return true;
 		}
 		return false;
