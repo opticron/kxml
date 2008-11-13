@@ -627,12 +627,13 @@ class XmlNode
 		char[]truncxpath;
 		char[]nextnode = getNextNode(xpath,truncxpath);
 		char[]attrmatch = "";
+		// need to be able to split the attribute match off even when it doesn't have [] around it
 		int offset = nextnode.find('[');
 		if (offset != -1) {
 			// XXX Implement attribute matching
 			attrmatch = nextnode[offset..$];
 			nextnode = nextnode[0..offset];
-			debug(xpath) writefln("Ignoring attribute chunk: %s\n",attrmatch);
+			debug(xpath) writefln("Found attribute chunk: %s\n",attrmatch);
 		}
 		debug(xpath) writefln("Looking for %s",nextnode);
 		XmlNode[]retarr;
@@ -641,7 +642,7 @@ class XmlNode
 			// we were searching for nodes, and this is one
 			debug(xpath) writefln("Found a node we want! name is: %s",getName);
 			retarr ~= this;
-		} else foreach(child;getChildren) if (!child.isCData) {
+		} else foreach(child;getChildren) if (!child.isCData && child.matchXPathAttr(attrmatch)) {
 			if ((caseSensitive && child.getName == nextnode) || (!caseSensitive && !child.getName().icmp(nextnode))) {
 				// child that matches the search string, pass on the truncated string
 				debug(xpath) writefln("Sending %s to %s",truncxpath,child.getName);
@@ -657,8 +658,56 @@ class XmlNode
 		}
 		return retarr;
 	}
+
+	private bool matchXPathAttr(char[]attrstr) {
+		debug(xpath)writefln("matching attribute string %s",attrstr);
+		if (attrstr.length < 2) {
+			// if there's no attribute list to check, then it matches
+			return true;
+		}
+		// right now, this can only handle simple attribute matching
+		// i.e. no subnode matches, otherwise, the / in the subnode match will make things explode...badly
+		// strip off the encasing [] if it exists
+		if (attrstr[0] == '[' && attrstr[attrstr.length-1] == ']') {
+			attrstr = attrstr[1..$-1];
+		} else if (attrstr[0] == '[' || attrstr[attrstr.length-1] == ']') {
+			// this seems to be malformed
+			debug(xpath)writefln("got malformed attribute match %s",attrstr);
+			return false;
+		}
+		if (attrstr.length < 2) {
+			// if there's no attribute list to check, then it matches
+			return true;
+		}
+		char[][]attrlist = attrstr.split(" and ");
+		foreach(attr;attrlist) {
+			debug(xpath)writefln("matching on %s",attr);
+			char[]datamatch = "";
+			int sep = attr.find('=');
+			// strip off the @ and separate the attribute and value if it exists
+			if (sep != -1) {
+				datamatch = attr[sep+1..$];
+				if (datamatch.length && datamatch[0] == '"' && datamatch[datamatch.length-1] == '"') {
+					datamatch = datamatch[1..$-1];
+				}
+				attr = attr[1..sep];
+			} else {
+				attr = attr[1..$];
+			}
+			// the !attr.length is just a precaution for the idiots that would do it
+			if (!attr.length || !hasAttribute(attr)) {
+				debug(xpath)writefln("could not find %s",attr);
+				return false;
+			}
+			if (datamatch.length && getAttribute(attr) != datamatch) {
+				debug(xpath)writefln("search value %s did not match attribute value %s",datamatch,getAttribute(attr));
+				return false;
+			}
+		}
+		return true;
+	}
 	
-	bool isDeepPath(char[]xpath) {
+	private bool isDeepPath(char[]xpath) {
 		// check to see if we're currently searching a deep path
 		if (xpath.length > 1 && xpath[0..2] == "//") {
 			return true;
@@ -667,7 +716,7 @@ class XmlNode
 	}
 
 	// this does not modify the incoming string, only pulls a slice out of it
-	char[]getNextNode(char[]xpath,out char[]truncxpath) {
+	private char[]getNextNode(char[]xpath,out char[]truncxpath) {
 		if (isDeepPath(xpath)) xpath = xpath[2..$];
 		char[][]nodes = std.string.split(xpath,"/");
 		if (nodes.length) {
