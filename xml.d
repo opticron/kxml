@@ -642,8 +642,8 @@ class XmlNode
 			// we were searching for nodes, and this is one
 			debug(xpath) writefln("Found a node we want! name is: %s",getName);
 			retarr ~= this;
-		} else foreach(child;getChildren) if (!child.isCData && child.matchXPathAttr(attrmatch)) {
-			if ((caseSensitive && child.getName == nextnode) || (!caseSensitive && !child.getName().icmp(nextnode))) {
+		} else foreach(child;getChildren) if (!child.isCData && child.matchXPathAttr(attrmatch,caseSensitive)) {
+			if (nextnode == "" || (caseSensitive && child.getName == nextnode) || (!caseSensitive && !child.getName().icmp(nextnode))) {
 				// child that matches the search string, pass on the truncated string
 				debug(xpath) writefln("Sending %s to %s",truncxpath,child.getName);
 				retarr ~= child.parseXPath(truncxpath,caseSensitive);
@@ -659,7 +659,7 @@ class XmlNode
 		return retarr;
 	}
 
-	private bool matchXPathAttr(char[]attrstr) {
+	private bool matchXPathAttr(char[]attrstr,bool caseSen) {
 		debug(xpath)writefln("matching attribute string %s",attrstr);
 		if (attrstr.length < 2) {
 			// if there's no attribute list to check, then it matches
@@ -699,9 +699,11 @@ class XmlNode
 				debug(xpath)writefln("could not find %s",attr);
 				return false;
 			}
-			if (datamatch.length && getAttribute(attr) != datamatch) {
-				debug(xpath)writefln("search value %s did not match attribute value %s",datamatch,getAttribute(attr));
-				return false;
+			if (datamatch.length) {
+				if ((getAttribute(attr) != datamatch && caseSen) || (getAttribute(attr).icmp(datamatch) != 0 && !caseSen)) {
+					debug(xpath)writefln("search value %s did not match attribute value %s",datamatch,getAttribute(attr));
+					return false;
+				}
 			}
 		}
 		return true;
