@@ -809,3 +809,25 @@ char[] xmlDecode(char[] src) {
         return tempStr;
 }
 
+unittest {
+	char[]xmlstring = "<message responseID=\"1234abcd\" text=\"weather 12345\" type=\"message\"><flags>triggered</flags><flags>targeted</flags></message>";
+	XmlNode xml = xmlstring.readDocument();
+	xmlstring = xml.toString;
+	// ensure that the string doesn't mutate after a second reading, it shouldn't
+	debug(xml)writefln("kxml.xml unit test");
+	assert(xmlstring.readDocument().toString == xmlstring);
+	debug(xpath)writefln("kxml.xml XPath unit test");
+	XmlNode[]searchlist = xml.parseXPath("message/flags");
+	assert(searchlist.length == 2 && searchlist[0].getName == "flags");
+
+	debug(xpath)writefln("kxml.xml deep XPath unit test");
+	searchlist = xml.parseXPath("//message//flags");
+	assert(searchlist.length == 2 && searchlist[0].getName == "flags");
+
+	debug(xpath)writefln("kxml.xml attribute match XPath unit test");
+	searchlist = xml.parseXPath("/message[@type=\"message\" and @responseID=\"1234abcd\"]/flags");
+	assert(searchlist.length == 2 && searchlist[0].getName == "flags");
+	searchlist = xml.parseXPath("message[@type=\"toaster\"]/flags");
+	assert(searchlist.length == 0);
+}
+
