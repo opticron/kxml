@@ -487,7 +487,7 @@ class XmlNode
 		char[]ret = "";
 		while (input.length > 0 && !isWhiteSpace(input[0])) {
 			ret ~= input[0];
-			input = input[1..input.length];
+			input = input[1..$];
 		}
 		return ret;
 	}
@@ -495,7 +495,7 @@ class XmlNode
 	// eats tabs, newlines, and spaces until the next normal character
 	private void eatWhiteSpace(inout char[]input) {
 		while (input.length > 0 && isWhiteSpace(input[0])) {
-			input = input[1..input.length];
+			input = input[1..$];
 		}
 	}
 
@@ -668,9 +668,9 @@ class XmlNode
 		// right now, this can only handle simple attribute matching
 		// i.e. no subnode matches, otherwise, the / in the subnode match will make things explode...badly
 		// strip off the encasing [] if it exists
-		if (attrstr[0] == '[' && attrstr[attrstr.length-1] == ']') {
+		if (attrstr[0] == '[' && attrstr[$-1] == ']') {
 			attrstr = attrstr[1..$-1];
-		} else if (attrstr[0] == '[' || attrstr[attrstr.length-1] == ']') {
+		} else if (attrstr[0] == '[' || attrstr[$-1] == ']') {
 			// this seems to be malformed
 			debug(xpath)writefln("got malformed attribute match %s",attrstr);
 			return false;
@@ -687,7 +687,7 @@ class XmlNode
 			// strip off the @ and separate the attribute and value if it exists
 			if (sep != -1) {
 				datamatch = attr[sep+1..$];
-				if (datamatch.length && datamatch[0] == '"' && datamatch[datamatch.length-1] == '"') {
+				if (datamatch.length && datamatch[0] == '"' && datamatch[$-1] == '"') {
 					datamatch = datamatch[1..$-1];
 				}
 				attr = attr[1..sep];
