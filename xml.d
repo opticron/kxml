@@ -757,6 +757,83 @@ class CData : XmlNode
 	protected override char[] write(char[]indent) {
 		return indent~toString()~"\n";
 	}
+
+	protected char[] asCloseTag() { return ""; }
+
+	protected bool isLeaf() {
+		return true;
+	}
+
+	override char[] getName() {
+		throw new XmlError("CData nodes do not have names to get.");
+		return "";
+	}
+
+	// Set the name of this XmlNode.
+	override void setName(char[] newName) {
+		throw new XmlError("CData nodes do not have names to set.");
+	}
+
+	// Does this XmlNode have an attribute with name?
+	override bool hasAttribute(char[] name) {
+		throw new XmlError("CData nodes do not have attributes.");
+		return false;
+	}
+
+	// Get the attribute with name, or return null if no attribute has that name.
+	override char[] getAttribute(char[] name) {
+		throw new XmlError("CData nodes do not have attributes to get.");
+		return null;
+	}
+
+	// Return an array of all attributes (by reference, no copy is made).
+	// the user should know that these may have html escapes
+	override char[][char[]] getAttributes() {
+		throw new XmlError("CData nodes do not have attributes to get.");
+		return null;
+	}
+
+	/**
+	 * Set an attribute to a string value.  The attribute is created if it
+	 * doesn't exist.*/
+	override XmlNode setAttribute(char[] name, char[] value) {
+		throw new XmlError("CData nodes do not have attributes to set.");
+		return null;
+	}
+
+	/**
+	 * Set an attribute to an integer value (stored internally as a string).
+	 * The attribute is created if it doesn't exist.*/
+	override XmlNode setAttribute(char[] name, int value) {
+		throw new XmlError("CData nodes do not have attributes to set.");
+		return null;
+	}
+
+	/**
+	 * Set an attribute to a float value (stored internally as a string).
+	 * The attribute is created if it doesn't exist.*/
+	override XmlNode setAttribute(char[] name, float value) {
+		throw new XmlError("CData nodes do not have attributes to set.");
+		return null;
+	}
+
+	// Add an XmlNode child.
+	override XmlNode addChild(XmlNode newNode) {
+		throw new XmlError("Cannot add a child node to CData.");
+		return null;
+	}
+
+	// Add a child Node of cdata (text).
+	override XmlNode addCdata(char[] cdata) {
+		throw new XmlError("Cannot add a child node to CData.");
+		return null;
+	}
+
+	// make an alias so as not to break compatibility
+	override XmlNode addCData(char[] cdata) {
+		throw new XmlError("Cannot add a child node to CData.");
+		return null;
+	}
 }
 
 // A node type for xml instructions.
@@ -785,6 +862,191 @@ class XmlPI : XmlNode {
 		}
 		char[] s = "<?" ~ _name ~ genAttrString() ~ "?>";
 		return s;
+	}
+
+	protected char[] asCloseTag() { return ""; }
+
+	protected bool isLeaf() {
+		return true;
+	}
+
+	override char[] getName() {
+		throw new XmlError("XmlPI nodes do not have names to get.");
+		return "";
+	}
+
+	// Set the name of this XmlNode.
+	override void setName(char[] newName) {
+		throw new XmlError("XmlPI nodes do not have names to set.");
+	}
+
+	// Does this XmlNode have an attribute with name?
+	override bool hasAttribute(char[] name) {
+		throw new XmlError("XmlPI nodes do not have attributes.");
+		return false;
+	}
+
+	// Get the attribute with name, or return null if no attribute has that name.
+	override char[] getAttribute(char[] name) {
+		throw new XmlError("XmlPI nodes do not have attributes to get.");
+		return null;
+	}
+
+	// Return an array of all attributes (by reference, no copy is made).
+	// the user should know that these may have html escapes
+	override char[][char[]] getAttributes() {
+		throw new XmlError("XmlPI nodes do not have attributes to get.");
+		return null;
+	}
+
+	/**
+	 * Set an attribute to a string value.  The attribute is created if it
+	 * doesn't exist.*/
+	override XmlNode setAttribute(char[] name, char[] value) {
+		throw new XmlError("XmlPI nodes do not have attributes to set.");
+		return null;
+	}
+
+	/**
+	 * Set an attribute to an integer value (stored internally as a string).
+	 * The attribute is created if it doesn't exist.*/
+	override XmlNode setAttribute(char[] name, int value) {
+		throw new XmlError("XmlPI nodes do not have attributes to set.");
+		return null;
+	}
+
+	/**
+	 * Set an attribute to a float value (stored internally as a string).
+	 * The attribute is created if it doesn't exist.*/
+	override XmlNode setAttribute(char[] name, float value) {
+		throw new XmlError("XmlPI nodes do not have attributes to set.");
+		return null;
+	}
+
+	// Add an XmlNode child.
+	override XmlNode addChild(XmlNode newNode) {
+		throw new XmlError("Cannot add a child node to XmlPI.");
+		return null;
+	}
+
+	// Add a child Node of cdata (text).
+	override XmlNode addCdata(char[] cdata) {
+		throw new XmlError("Cannot add a child node to XmlPI.");
+		return null;
+	}
+
+	// make an alias so as not to break compatibility
+	override XmlNode addCData(char[] cdata) {
+		throw new XmlError("Cannot add a child node to XmlPI.");
+		return null;
+	}
+}
+
+// A node type for xml instructions.
+class XmlComment : XmlNode {
+	char[]comment;
+	this(char[]incomment) {
+		comment = incomment;
+		super("");
+	}
+
+	override bool isXmlPI() {
+		return false;
+	}
+
+	override char[] getCData() {
+		return "";
+	}
+	override char[] toString() {
+		return asOpenTag();
+	}
+
+	protected override char[] write(char[]indent="") {
+		return indent~asOpenTag()~"\n";
+	}
+	protected char[] asOpenTag() {
+		if (_name.length == 0) {
+			return "";
+		}
+		char[] s = "<!--" ~ comment  ~ "-->";
+		return s;
+	}
+
+	protected char[] asCloseTag() { return ""; }
+
+	protected bool isLeaf() {
+		return true;
+	}
+
+	override char[] getName() {
+		throw new XmlError("Comment nodes do not have names to get.");
+		return "";
+	}
+
+	// Set the name of this XmlNode.
+	override void setName(char[] newName) {
+		throw new XmlError("Comment nodes do not have names to set.");
+	}
+
+	// Does this XmlNode have an attribute with name?
+	override bool hasAttribute(char[] name) {
+		throw new XmlError("Comment nodes do not have attributes.");
+		return false;
+	}
+
+	// Get the attribute with name, or return null if no attribute has that name.
+	override char[] getAttribute(char[] name) {
+		throw new XmlError("Comment nodes do not have attributes to get.");
+		return null;
+	}
+
+	// Return an array of all attributes (by reference, no copy is made).
+	// the user should know that these may have html escapes
+	override char[][char[]] getAttributes() {
+		throw new XmlError("Comment nodes do not have attributes to get.");
+		return null;
+	}
+
+	/**
+	 * Set an attribute to a string value.  The attribute is created if it
+	 * doesn't exist.*/
+	override XmlNode setAttribute(char[] name, char[] value) {
+		throw new XmlError("Comment nodes do not have attributes to set.");
+		return null;
+	}
+
+	/**
+	 * Set an attribute to an integer value (stored internally as a string).
+	 * The attribute is created if it doesn't exist.*/
+	override XmlNode setAttribute(char[] name, int value) {
+		throw new XmlError("Comment nodes do not have attributes to set.");
+		return null;
+	}
+
+	/**
+	 * Set an attribute to a float value (stored internally as a string).
+	 * The attribute is created if it doesn't exist.*/
+	override XmlNode setAttribute(char[] name, float value) {
+		throw new XmlError("Comment nodes do not have attributes to set.");
+		return null;
+	}
+
+	// Add an XmlNode child.
+	override XmlNode addChild(XmlNode newNode) {
+		throw new XmlError("Cannot add a child node to comment.");
+		return null;
+	}
+
+	// Add a child Node of cdata (text).
+	override XmlNode addCdata(char[] cdata) {
+		throw new XmlError("Cannot add a child node to comment.");
+		return null;
+	}
+
+	// make an alias so as not to break compatibility
+	override XmlNode addCData(char[] cdata) {
+		throw new XmlError("Cannot add a child node to comment.");
+		return null;
 	}
 }
 
