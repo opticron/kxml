@@ -630,7 +630,7 @@ class XmlNode
 		// need to be able to split the attribute match off even when it doesn't have [] around it
 		int offset = nextnode.find('[');
 		if (offset != -1) {
-			// XXX Implement attribute matching
+			// rip out attribute string
 			attrmatch = nextnode[offset..$];
 			nextnode = nextnode[0..offset];
 			debug(xpath) writefln("Found attribute chunk: %s\n",attrmatch);
