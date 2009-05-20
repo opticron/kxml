@@ -289,6 +289,11 @@ class XmlNode
 		}
 	}
 
+	// add array of nodes directly into the current node
+	void addChildren(XmlNode[]newChildren) {
+		_children ~= newChildren;
+	}
+
 	// returns everything after the first node TREE (a node can be text as well)
 	private int parseNode(XmlNode parent,inout char[]xsrc) {
 		// if it was just whitespace and no more text or tags, make sure that's covered
