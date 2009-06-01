@@ -875,59 +875,6 @@ class XmlPI : XmlNode {
 		return true;
 	}
 
-	override char[] getName() {
-		throw new XmlError("XmlPI nodes do not have names to get.");
-		return "";
-	}
-
-	// Set the name of this XmlNode.
-	override void setName(char[] newName) {
-		throw new XmlError("XmlPI nodes do not have names to set.");
-	}
-
-	// Does this XmlNode have an attribute with name?
-	override bool hasAttribute(char[] name) {
-		throw new XmlError("XmlPI nodes do not have attributes.");
-		return false;
-	}
-
-	// Get the attribute with name, or return null if no attribute has that name.
-	override char[] getAttribute(char[] name) {
-		throw new XmlError("XmlPI nodes do not have attributes to get.");
-		return null;
-	}
-
-	// Return an array of all attributes (by reference, no copy is made).
-	// the user should know that these may have html escapes
-	override char[][char[]] getAttributes() {
-		throw new XmlError("XmlPI nodes do not have attributes to get.");
-		return null;
-	}
-
-	/**
-	 * Set an attribute to a string value.  The attribute is created if it
-	 * doesn't exist.*/
-	override XmlNode setAttribute(char[] name, char[] value) {
-		throw new XmlError("XmlPI nodes do not have attributes to set.");
-		return null;
-	}
-
-	/**
-	 * Set an attribute to an integer value (stored internally as a string).
-	 * The attribute is created if it doesn't exist.*/
-	override XmlNode setAttribute(char[] name, int value) {
-		throw new XmlError("XmlPI nodes do not have attributes to set.");
-		return null;
-	}
-
-	/**
-	 * Set an attribute to a float value (stored internally as a string).
-	 * The attribute is created if it doesn't exist.*/
-	override XmlNode setAttribute(char[] name, float value) {
-		throw new XmlError("XmlPI nodes do not have attributes to set.");
-		return null;
-	}
-
 	// Add an XmlNode child.
 	override XmlNode addChild(XmlNode newNode) {
 		throw new XmlError("Cannot add a child node to XmlPI.");
