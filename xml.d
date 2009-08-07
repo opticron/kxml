@@ -171,6 +171,7 @@ class XmlNode
 	}
 
 	// Add an XmlNode child.
+	// XXX this is expensive
 	XmlNode addChild(XmlNode newNode) {
 		_children ~= newNode;
 		return this;
@@ -312,7 +313,7 @@ class XmlNode
 			if (toktype == ucdata) {
 				token = token[9..$-3];
 			}
-			debug(xml)writefln("I found cdata text: "~token);
+			debug(xml)writefln("I found cdata text: %s",token);
 			parent.addCdata(token);
 		// look for a closing tag to see if we're done
 		} else if (toktype == ctag) {
@@ -328,10 +329,10 @@ class XmlNode
 			// strip off the tokens that identify a xml PI node
 			token = token[2..$-2];
 			char[]name = getWSToken(token);
-			debug(xml)writefln("Got a "~name~" XML processing instruction");
+			debug(xml)writefln("Got a %s XML processing instruction",name);
 			XmlPI newnode = new XmlPI(name);
 			eatWhiteSpace(token);
-			debug(xml)writefln("Attributes: "~token);
+			debug(xml)writefln("Attributes: %s",token);
 			parseAttributes(newnode,token);
 			parent.addChild(newnode);
 		// look for comments or other xml instructions
@@ -340,9 +341,9 @@ class XmlNode
 			debug(xml)writefln("I found a XML instruction!");
 		// opening tags are caught here
 		} else if (toktype == otag) {
-			debug(xml)writefln("I found a XML tag: "~token);
+			debug(xml)writefln("I found a XML tag: %s",token);
 			token = token[1..$-1];
-			debug(xml)writefln("Tag Contents: "~token);
+			debug(xml)writefln("Tag Contents: %s",token);
 			// check for self-closing tag
 			bool selfclosing = false;
 			if (token[$-1] == '/') {
@@ -352,9 +353,9 @@ class XmlNode
 				debug(xml)writefln("self-closing tag!");
 			}
 			char[]name = getWSToken(token);
-			debug(xml)writefln("It was a "~name~" tag!");
+			debug(xml)writefln("It was a %s tag!",name);
 			eatWhiteSpace(token);
-			debug(xml)writefln("Attributes: "~token);
+			debug(xml)writefln("Attributes: %s",token);
 			XmlNode newnode = new XmlNode(name);
 			parseAttributes(newnode,token);
 			if (!selfclosing) {
@@ -396,6 +397,7 @@ class XmlNode
 	};
 	// this grabs the next token, being either unparsed cdata, parsed cdata, an xml or processing instruction, or a normal tag
 	// for performance reasons, this should spit out a fully formed xml node, should get a 1.5x speed increase
+	// XXX this function needs rework to be more efficient, all this appending is expensive
 	private int getXmlToken(inout char[] xsrc, inout char[] token) {
 		eatWhiteSpace(xsrc);
 		if (!xsrc.length) {
@@ -470,6 +472,7 @@ class XmlNode
 		// the -delim.length is partially optimization and partially avoiding jumping the array bounds
 		int i;
 		for (i = 0;i<xsrc.length-delim.length;i++) {
+			// XXX this is expensive
 			if (xsrc[i..i+delim.length].cmp(delim) == 0) {
 				break;
 			}
@@ -487,6 +490,7 @@ class XmlNode
 	}
 
 	// basically to get the name off of open tags
+	// XXX this is pretty expensive as well...
 	private char[]getWSToken(inout char[]input) {
 		eatWhiteSpace(input);
 		char[]ret = "";
@@ -648,7 +652,7 @@ class XmlNode
 			debug(xpath) writefln("Found a node we want! name is: %s",getName);
 			retarr ~= this;
 		} else foreach(child;getChildren) if (!child.isCData && child.matchXPathAttr(attrmatch,caseSensitive)) {
-			if (nextnode == "" || (caseSensitive && child.getName == nextnode) || (!caseSensitive && !child.getName().icmp(nextnode))) {
+			if (!nextnode.length || (caseSensitive && child.getName == nextnode) || (!caseSensitive && !child.getName().icmp(nextnode))) {
 				// child that matches the search string, pass on the truncated string
 				debug(xpath) writefln("Sending %s to %s",truncxpath,child.getName);
 				retarr ~= child.parseXPath(truncxpath,caseSensitive);
@@ -716,7 +720,7 @@ class XmlNode
 	
 	private bool isDeepPath(char[]xpath) {
 		// check to see if we're currently searching a deep path
-		if (xpath.length > 1 && xpath[0..2] == "//") {
+		if (xpath.length > 1 && xpath[0] == '/' && xpath[1] == '/') {
 			return true;
 		}
 		return false;
