@@ -171,9 +171,14 @@ class XmlNode
 	}
 
 	// Add an XmlNode child.
-	// XXX this is expensive
 	XmlNode addChild(XmlNode newNode) {
-		_children ~= newNode;
+		// let's bump things by increments of 10 to make them more efficient
+		if (_children.length+1%10==0) {
+			_children.length = _children.length + 10;
+			_children.length = _children.length - 10;
+		}
+		_children.length = _children.length + 1;
+		_children[$-1] = newNode;
 		return this;
 	}
 
@@ -292,7 +297,13 @@ class XmlNode
 
 	// add array of nodes directly into the current node
 	void addChildren(XmlNode[]newChildren) {
-		_children ~= newChildren;
+		// let's bump things by increments of 10 to make them more efficient
+		if (_children.length+newChildren.length%10 < newChildren.length) {
+			_children.length = _children.length + 10;
+			_children.length = _children.length - 10;
+		}
+		_children.length = _children.length + newChildren.length;
+		_children[$-newChildren.length..$] = newChildren[0..$];
 	}
 
 	// returns everything after the first node TREE (a node can be text as well)
