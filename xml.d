@@ -743,7 +743,7 @@ class CData : XmlNode
 	private char[] _cdata;
 
 	this(char[] cdata) {
-		_cdata = xmlDecode(cdata);
+		_cdata = cdata;
 	}
 
 	override bool isCData() {
@@ -751,11 +751,16 @@ class CData : XmlNode
 	}
 
 	override char[] getCData() {
-		return _cdata;
+		return xmlDecode(_cdata);
+	}
+
+	CData setCData(char[]cdata) {
+		_cdata = xmlEncode(cdata);
+		return this;
 	}
 
 	protected override char[] toString() {
-		return xmlEncode(_cdata);
+		return _cdata;
 	}
 
 	protected override char[] write(char[]indent) {
