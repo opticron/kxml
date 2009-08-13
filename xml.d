@@ -497,9 +497,9 @@ class XmlNode
 
 	// eats tabs, newlines, and spaces until the next normal character
 	private void eatWhiteSpace(inout char[]input) {
-		while (input.length > 0 && isWhiteSpace(input[0])) {
-			input = input[1..$];
-		}
+		int i;
+		for(i=0;input.length > i && isWhiteSpace(input[i]);i++) {}
+		input = input[i..$];
 	}
 
 	// lets you know if the character is a whitespace character
