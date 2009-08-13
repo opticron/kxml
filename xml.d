@@ -399,76 +399,72 @@ class XmlNode
 	// for performance reasons, this should spit out a fully formed xml node, should get a 1.5x speed increase
 	// XXX this function needs rework to be more efficient, all this appending is expensive
 	private int getXmlToken(inout char[] xsrc, inout char[] token) {
+		int slice;
 		eatWhiteSpace(xsrc);
 		if (!xsrc.length) {
 			return notoken;
 		}
 		if (xsrc[0] != '<') {
-			token = readUntil(xsrc,"<");
+			slice = readUntil(xsrc,"<");
+			token = xsrc[0..slice];
+			xsrc = xsrc[slice..$];
 			return pcdata;
 		// types of tags, gotta make sure we find the closing > (or ]]> in the case of ucdata)
 		} else if (xsrc[1] == '/') {
 			// closing tag!
-			token = readUntil(xsrc,">");
-			// if we have more characters in xsrc, that means the token was found and we need to rip it off the string, then add it to the token
-			// otherwise, we should just return the token so the error gets caught in the parser :D
-			if (xsrc.length) {
-				xsrc = xsrc[1..$];
-				token ~= ">";
-			}
+			slice = readUntil(xsrc,">");
+			slice += ">".length;
+			if (slice>xsrc.length) slice = xsrc.length;
+			token = xsrc[0..slice];
+			xsrc = xsrc[slice..$];
 			return ctag;
 		} else if (xsrc[1] == '?') {
 			// processing instruction!
-			token = readUntil(xsrc,"?>");
-			// make sure any errors get caught in the parser
-			if (xsrc.length > 1) {
-				xsrc = xsrc[2..$];
-				token ~= "?>";
-			}
+			slice = readUntil(xsrc,"?>");
+			slice += "?>".length;
+			if (slice>xsrc.length) slice = xsrc.length;
+			token = xsrc[0..slice];
+			xsrc = xsrc[slice..$];
 			return procinst;
 		// 12 is the magic number that allows for the empty cdata string ![CDATA[]]>
 		} else if (xsrc.length >= 12 && xsrc[1..9].cmp("![CDATA[") == 0) {
 			// unparsed cdata!
-			token = readUntil(xsrc,"]]>");
-			// make sure any errors get caught in the parser
-			if (xsrc.length > 2) {
-				xsrc = xsrc[3..$];
-				token ~= "]]>";
-			}
+			slice = readUntil(xsrc,"]]>");
+			slice += "]]>".length;
+			if (slice>xsrc.length) slice = xsrc.length;
+			token = xsrc[0..slice];
+			xsrc = xsrc[slice..$];
 			return ucdata;
 		// make sure we parse out comments, minimum length for this is 7 (<!---->)
 		} else if (xsrc.length >= 7 && xsrc[1..4].cmp("!--") == 0) {
 			// a comment...which will just get ignored later
-			token = readUntil(xsrc,"-->");
-			// make sure any errors get caught in the parser
-			if (xsrc.length > 2) {
-				xsrc = xsrc[3..$];
-				token ~= "-->";
-			}
+			slice = readUntil(xsrc,"-->");
+			slice += "-->".length;
+			if (slice>xsrc.length) slice = xsrc.length;
+			token = xsrc[0..slice];
+			xsrc = xsrc[slice..$];
 			return comment;
 		} else if (xsrc[1] == '!') {
 			// xml instruction!
-			token = readUntil(xsrc,">");
-			// make sure any errors get caught in the parser
-			if (xsrc.length) {
-				xsrc = xsrc[1..$];
-				token ~= ">";
-			}
+			slice = readUntil(xsrc,">");
+			slice += ">".length;
+			if (slice>xsrc.length) slice = xsrc.length;
+			token = xsrc[0..slice];
+			xsrc = xsrc[slice..$];
 			return xmlinst;
 		} else {
 			// just a regular old tag
-			token = readUntil(xsrc,">");
-			// make sure any errors get caught in the parser
-			if (xsrc.length) {
-				xsrc = xsrc[1..$];
-				token ~= ">";
-			}
+			slice = readUntil(xsrc,">");
+			slice += ">".length;
+			if (slice>xsrc.length) slice = xsrc.length;
+			token = xsrc[0..slice];
+			xsrc = xsrc[slice..$];
 			return otag;
 		}
 	}
 
-	// read data until the delimiter is found, if found the delimiter is left on the first parameter
-	private char[]readUntil(inout char[]xsrc, char[]delim) {
+	// read data until the delimiter is found, return the index where the delimiter starts
+	private int readUntil(char[]xsrc, char[]delim) {
 		// the -delim.length is partially optimization and partially avoiding jumping the array bounds
 		int i;
 		for (i = 0;i<xsrc.length-delim.length;i++) {
@@ -477,16 +473,11 @@ class XmlNode
 				break;
 			}
 		}
-		// i could put this inside the loop, but it probably runs faster with it outside
-		if (i == 0) {
-			return "";
+		// yeah...if we didn't find it, then the whole string is the token :D
+		if (i>=xsrc.length-delim.length) {
+			return xsrc.length;
 		}
-		// and now to split up the string
-		// latter part of the string gets the delimiter
-		char[]token;
-		token = xsrc[0..i];
-		xsrc = xsrc[i..$];
-		return token;
+		return i;
 	}
 
 	// basically to get the name off of open tags
