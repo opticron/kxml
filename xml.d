@@ -421,6 +421,15 @@ class XmlNode
 			xsrc = xsrc[slice..$];
 			return pcdata;
 		// types of tags, gotta make sure we find the closing > (or ]]> in the case of ucdata)
+		// check for the opening tag first, because it's most likely
+		} else if (xsrc[1] != '!' && xsrc[1] != '?' && xsrc[1] != '/') {
+			// just a regular old tag
+			slice = readUntil(xsrc,">");
+			slice += ">".length;
+			if (slice>xsrc.length) slice = xsrc.length;
+			token = xsrc[0..slice];
+			xsrc = xsrc[slice..$];
+			return otag;
 		} else if (xsrc[1] == '/') {
 			// closing tag!
 			slice = readUntil(xsrc,">");
@@ -463,14 +472,6 @@ class XmlNode
 			token = xsrc[0..slice];
 			xsrc = xsrc[slice..$];
 			return xmlinst;
-		} else {
-			// just a regular old tag
-			slice = readUntil(xsrc,">");
-			slice += ">".length;
-			if (slice>xsrc.length) slice = xsrc.length;
-			token = xsrc[0..slice];
-			xsrc = xsrc[slice..$];
-			return otag;
 		}
 	}
 
