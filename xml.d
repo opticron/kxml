@@ -466,15 +466,9 @@ class XmlNode
 	// read data until the delimiter is found, return the index where the delimiter starts
 	private int readUntil(char[]xsrc, char[]delim) {
 		// the -delim.length is partially optimization and partially avoiding jumping the array bounds
-		int i;
-		for (i = 0;i<xsrc.length-delim.length;i++) {
-			// XXX this is expensive
-			if (xsrc[i..i+delim.length].cmp(delim) == 0) {
-				break;
-			}
-		}
+		int i = xsrc.find(delim);
 		// yeah...if we didn't find it, then the whole string is the token :D
-		if (i>=xsrc.length-delim.length) {
+		if (i == -1) {
 			return xsrc.length;
 		}
 		return i;
