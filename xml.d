@@ -17,6 +17,7 @@ module xml;
 
 import std.string;
 import std.stdio;
+import std.ctype:isspace;
 
 /**
  * Read an entire string into a tree of XmlNodes.
@@ -342,7 +343,7 @@ class XmlNode
 			char[]name = getWSToken(token);
 			debug(xml)writefln("Got a %s XML processing instruction",name);
 			XmlPI newnode = new XmlPI(name);
-			eatWhiteSpace(token);
+			token = stripl(token);
 			debug(xml)writefln("Attributes: %s",token);
 			parseAttributes(newnode,token);
 			parent.addChild(newnode);
@@ -365,7 +366,7 @@ class XmlNode
 			}
 			char[]name = getWSToken(token);
 			debug(xml)writefln("It was a %s tag!",name);
-			eatWhiteSpace(token);
+			token = stripl(token);
 			debug(xml)writefln("Attributes: %s",token);
 			XmlNode newnode = new XmlNode(name);
 			parseAttributes(newnode,token);
@@ -411,7 +412,7 @@ class XmlNode
 	// XXX this function needs rework to be more efficient
 	private int getXmlToken(inout char[] xsrc, inout char[] token) {
 		int slice;
-		eatWhiteSpace(xsrc);
+		xsrc = stripl(xsrc);
 		if (!xsrc.length) {
 			return notoken;
 		}
@@ -488,34 +489,19 @@ class XmlNode
 
 	// basically to get the name off of open tags
 	private char[]getWSToken(inout char[]input) {
-		eatWhiteSpace(input);
+		input = stripl(input);
 		int i;
-		for(i=0;input.length > i && !isWhiteSpace(input[i]);i++){}
+		for(i=0;input.length > i && !isspace(input[i]);i++){}
 		auto ret = input[0..i];
 		input = input[i..$];
 		return ret;
-	}
-
-	// eats tabs, newlines, and spaces until the next normal character
-	private void eatWhiteSpace(inout char[]input) {
-		int i;
-		for(i=0;input.length > i && isWhiteSpace(input[i]);i++) {}
-		input = input[i..$];
-	}
-
-	// lets you know if the character is a whitespace character
-	private int isWhiteSpace(char checkspace) {
-		if (checkspace == '\u0020' || checkspace == '\u0009' || checkspace == '\u000A' || checkspace == '\u000D') {
-			return 1;
-		}
-		return 0;
 	}
 
 	// this code is now officially prettified
 	private void parseAttributes (XmlNode xml,char[]attrstr) {
 		char[]ripName(inout char[]input) {
 			int i;
-			for(i=0;i < input.length && !isWhiteSpace(input[i]) && input[i] != '=';i++){}
+			for(i=0;i < input.length && !isspace(input[i]) && input[i] != '=';i++){}
 			auto ret = input[0..i];
 			input = input[i..$];
 			return ret;
@@ -534,24 +520,24 @@ class XmlNode
 		        return tmp;
 		}
 
-		eatWhiteSpace(attrstr);
+		attrstr = stripl(attrstr);
 		while(attrstr.length) {
 			// snag the name from the attribute string
 			char[]value,name = ripName(attrstr);
-			eatWhiteSpace(attrstr);
+			attrstr = stripl(attrstr);
 			// check for = to make sure the attribute string is kosher
 			if (!attrstr.length) throw new XmlError("Unexpected end of attribute string near "~name);
 			if (attrstr[0] != '=') throw new XmlError("Missing = in attribute string with name "~name);
 			// rip off =
 			attrstr = attrstr[1..$];
-			eatWhiteSpace(attrstr);
+			attrstr = stripl(attrstr);
 			if (attrstr.length && (attrstr[0] == '"' || attrstr[0] == '\'')) {
 				value = ripValue(attrstr);
 			} else {
 				value = getWSToken(attrstr);
 			}
 			xml.setAttribute(name,value);
-			eatWhiteSpace(attrstr);
+			attrstr = stripl(attrstr);
 		}
 	}
 
