@@ -397,7 +397,7 @@ class XmlNode
 	};
 	// this grabs the next token, being either unparsed cdata, parsed cdata, an xml or processing instruction, or a normal tag
 	// for performance reasons, this should spit out a fully formed xml node, should get a 1.5x speed increase
-	// XXX this function needs rework to be more efficient, all this appending is expensive
+	// XXX this function needs rework to be more efficient
 	private int getXmlToken(inout char[] xsrc, inout char[] token) {
 		int slice;
 		eatWhiteSpace(xsrc);
@@ -475,14 +475,12 @@ class XmlNode
 	}
 
 	// basically to get the name off of open tags
-	// XXX this is pretty expensive as well...
 	private char[]getWSToken(inout char[]input) {
 		eatWhiteSpace(input);
-		char[]ret = "";
-		while (input.length > 0 && !isWhiteSpace(input[0])) {
-			ret ~= input[0];
-			input = input[1..$];
-		}
+		int i;
+		for(i=0;input.length > i && !isWhiteSpace(input[i]);i++){}
+		auto ret = input[0..i];
+		input = input[i..$];
 		return ret;
 	}
 
