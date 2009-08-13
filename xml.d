@@ -421,17 +421,11 @@ class XmlNode
 			token = xsrc[0..slice];
 			xsrc = xsrc[slice..$];
 			return pcdata;
+		} 
+		
 		// types of tags, gotta make sure we find the closing > (or ]]> in the case of ucdata)
-		// check for the opening tag first, because it's most likely
-		} else if (xsrc[1] != '!' && xsrc[1] != '?' && xsrc[1] != '/') {
-			// just a regular old tag
-			slice = readUntil(xsrc,">");
-			slice += ">".length;
-			if (slice>xsrc.length) slice = xsrc.length;
-			token = xsrc[0..slice];
-			xsrc = xsrc[slice..$];
-			return otag;
-		} else if (xsrc[1] == '/') {
+		switch(xsrc[1]) {
+		case '/':
 			// closing tag!
 			slice = readUntil(xsrc,">");
 			slice += ">".length;
@@ -439,7 +433,7 @@ class XmlNode
 			token = xsrc[0..slice];
 			xsrc = xsrc[slice..$];
 			return ctag;
-		} else if (xsrc[1] == '?') {
+		case '?':
 			// processing instruction!
 			slice = readUntil(xsrc,"?>");
 			slice += "?>".length;
@@ -447,32 +441,41 @@ class XmlNode
 			token = xsrc[0..slice];
 			xsrc = xsrc[slice..$];
 			return procinst;
-		// 12 is the magic number that allows for the empty cdata string ![CDATA[]]>
-		} else if (xsrc.length >= 12 && xsrc[1..9].cmp("![CDATA[") == 0) {
-			// unparsed cdata!
-			slice = readUntil(xsrc,"]]>");
-			slice += "]]>".length;
-			if (slice>xsrc.length) slice = xsrc.length;
-			token = xsrc[0..slice];
-			xsrc = xsrc[slice..$];
-			return ucdata;
-		// make sure we parse out comments, minimum length for this is 7 (<!---->)
-		} else if (xsrc.length >= 7 && xsrc[1..4].cmp("!--") == 0) {
-			// a comment...which will just get ignored later
-			slice = readUntil(xsrc,"-->");
-			slice += "-->".length;
-			if (slice>xsrc.length) slice = xsrc.length;
-			token = xsrc[0..slice];
-			xsrc = xsrc[slice..$];
-			return comment;
-		} else if (xsrc[1] == '!') {
-			// xml instruction!
+		case '!':
+			// 12 is the magic number that allows for the empty cdata string ![CDATA[]]>
+			if (xsrc.length >= 12 && xsrc[2..9].cmp("[CDATA[") == 0) {
+				// unparsed cdata!
+				slice = readUntil(xsrc,"]]>");
+				slice += "]]>".length;
+				if (slice>xsrc.length) slice = xsrc.length;
+				token = xsrc[0..slice];
+				xsrc = xsrc[slice..$];
+				return ucdata;
+			// make sure we parse out comments, minimum length for this is 7 (<!---->)
+			} else if (xsrc.length >= 7 && xsrc[2..4].cmp("--") == 0) {
+				// a comment...which will just get ignored later
+				slice = readUntil(xsrc,"-->");
+				slice += "-->".length;
+				if (slice>xsrc.length) slice = xsrc.length;
+				token = xsrc[0..slice];
+				xsrc = xsrc[slice..$];
+				return comment;
+			}
+			// xml instruction is the default for this case
 			slice = readUntil(xsrc,">");
 			slice += ">".length;
 			if (slice>xsrc.length) slice = xsrc.length;
 			token = xsrc[0..slice];
 			xsrc = xsrc[slice..$];
 			return xmlinst;
+		default:
+			// just a regular old tag
+			slice = readUntil(xsrc,">");
+			slice += ">".length;
+			if (slice>xsrc.length) slice = xsrc.length;
+			token = xsrc[0..slice];
+			xsrc = xsrc[slice..$];
+			return otag;
 		}
 	}
 
