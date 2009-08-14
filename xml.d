@@ -82,7 +82,7 @@ class XmlCloseTag : XmlError {
  * --------------------------------
  * // Create an XmlNode tree with attributes and cdata, and write it to a file.
  * node.addChild(new XmlNode("mynode").setAttribute("x", 50).
- *     addChild(new XmlNode("Waldo").addCdata("Hello!"))).write("myfile.xml");
+ *     addChild(new XmlNode("Waldo").addCData("Hello!"))).write("myfile.xml");
  * --------------------------------*/
 class XmlNode
 {
@@ -200,14 +200,14 @@ class XmlNode
 	}
 
 	// Add a child Node of cdata (text).
-	XmlNode addCdata(char[] cdata) {
-		addChild(new CData(cdata));
-		return this;
+	deprecated XmlNode addCdata(char[] cdata) {
+		return addCData(cdata);
 	}
 
 	// make an alias so as not to break compatibility
 	XmlNode addCData(char[] cdata) {
-		return addCdata(cdata);
+		addChild(new CData(cdata));
+		return this;
 	}
 
 	// this should be done with casting tests
@@ -696,7 +696,7 @@ class CData : XmlNode
 	}
 
 	// Add a child Node of cdata (text).
-	override XmlNode addCdata(char[] cdata) {
+	deprecated override XmlNode addCdata(char[] cdata) {
 		throw new XmlError("Cannot add a child node to CData.");
 	}
 
@@ -746,7 +746,7 @@ class XmlPI : XmlNode {
 	}
 
 	// Add a child Node of cdata (text).
-	override XmlNode addCdata(char[] cdata) {
+	deprecated override XmlNode addCdata(char[] cdata) {
 		throw new XmlError("Cannot add a child node to XmlPI.");
 	}
 
@@ -844,7 +844,7 @@ class XmlComment : XmlNode {
 	}
 
 	// Add a child Node of cdata (text).
-	override XmlNode addCdata(char[] cdata) {
+	deprecated override XmlNode addCdata(char[] cdata) {
 		throw new XmlError("Cannot add a child node to comment.");
 	}
 
