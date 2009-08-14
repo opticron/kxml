@@ -319,10 +319,10 @@ class XmlNode
 		char[]token;
 		if (xsrc[0] != '<') {
 			slice = readUntil(xsrc,"<");
-			token = xsrc[0..slice];
+			token = strip(xsrc[0..slice]);
 			xsrc = xsrc[slice..$];
 			debug(xml)writefln("I found cdata text: %s",token);
-			parent.addCdata(token);
+			parent.addCData(token);
 			return 0;
 		} 
 		xsrc = xsrc[1..$];
@@ -367,7 +367,7 @@ class XmlNode
 				token = xsrc[0..slice];
 				xsrc = xsrc[slice+3..$];
 				debug(xml)writefln("I found cdata text: %s",token);
-				parent.addCdata(token);
+				parent.addCData(token);
 				return 0;
 			// make sure we parse out comments, minimum length for this is 7 (<!---->)
 			} else if (xsrc.length >= 5 && xsrc[0..2].cmp("--") == 0) {
