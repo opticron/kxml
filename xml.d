@@ -310,156 +310,73 @@ class XmlNode
 	// returns everything after the first node TREE (a node can be text as well)
 	private int parseNode(XmlNode parent,inout char[]xsrc) {
 		// if it was just whitespace and no more text or tags, make sure that's covered
+		xsrc = stripl(xsrc);
+		debug(xml)writefln("Parsing text: %s",xsrc);
 		if (!xsrc.length) {
 			return 0;
 		}
-		char[] token;
-		int toktype = getXmlToken(xsrc,token);
-		if (toktype == notoken) {
-			xsrc = "";
-		// ignore comments
-		} else if (toktype == comment) {
-			// do nothing, will return with 0 at the bottom
-		// take care of real cdata tags and plain text
-		} else if (toktype == pcdata || toktype == ucdata) {
-			if (toktype == ucdata) {
-				token = token[9..$-3];
-			}
-			debug(xml)writefln("I found cdata text: %s",token);
-			parent.addCdata(token);
-		// look for a closing tag to see if we're done
-		} else if (toktype == ctag) {
-			debug(xml)writefln("I found a closing tag (yikes):%s!",token);
-			if (token[2..$-1].icmp(parent.getName()) == 0) {
-				return 1;
-			} else {
-				throw new XmlError("Wrong close tag?");
-			}
-		// look for processing instructions
-		} else if (toktype == procinst) {
-			// all processing instructions are leaf nodes, which makes things a bit more simple than regular nodes
-			// strip off the tokens that identify a xml PI node
-			token = token[2..$-2];
-			char[]name = getWSToken(token);
-			debug(xml)writefln("Got a %s XML processing instruction",name);
-			XmlPI newnode = new XmlPI(name);
-			token = stripl(token);
-			debug(xml)writefln("Attributes: %s",token);
-			parseAttributes(newnode,token);
-			parent.addChild(newnode);
-		// look for comments or other xml instructions
-		} else if (toktype == xmlinst) {
-			// we don't do anything with xml instructions at the moment, so they're treated as comments
-			debug(xml)writefln("I found a XML instruction!");
-		// opening tags are caught here
-		} else if (toktype == otag) {
-			debug(xml)writefln("I found a XML tag: %s",token);
-			token = token[1..$-1];
-			debug(xml)writefln("Tag Contents: %s",token);
-			// check for self-closing tag
-			bool selfclosing = false;
-			if (token[$-1] == '/') {
-				// strip off the trailing / and go about business as normal
-				token = token[0..$-1];
-				selfclosing = true;
-				debug(xml)writefln("self-closing tag!");
-			}
-			char[]name = getWSToken(token);
-			debug(xml)writefln("It was a %s tag!",name);
-			token = stripl(token);
-			debug(xml)writefln("Attributes: %s",token);
-			XmlNode newnode = new XmlNode(name);
-			parseAttributes(newnode,token);
-			if (!selfclosing) {
-				// now that we've added all the attributes to the node, pass the rest of the string and the current node to the next node
-				int ret;
-				try {
-					while (xsrc.length) {
-						if ((ret = parseNode(newnode,xsrc)) == 1) {
-							break;
-						}
-					}
-				} catch (Exception e) {
-					throw new XmlMalformedSubnode(name~"\n"~e.toString());
-				}
-				// make sure we found our closing tag
-				// this is where we can get sloppy for stream parsing
-				if (!ret) {
-					// throw a missing closing tag exception
-					throw new XmlMissingEndTag(name);
-				}
-			}
-			parent.addChild(newnode);
-		} else {
-			// throw an exception cause we have a <, but no matching >
-			throw new XmlError("Unable to pull a token, missing >");
-		}
-		return 0;
-	}
-
-	private enum {
-		notoken=0,
-		pcdata,
-		ucdata,
-		xmlinst,
-		procinst,
-		otag,
-		ctag,
-		comment
-	};
-	// this grabs the next token, being either unparsed cdata, parsed cdata, an xml or processing instruction, or a normal tag
-	// for performance reasons, this should spit out a fully formed xml node, should get a 1.5x speed increase
-	// XXX this function needs rework to be more efficient
-	private int getXmlToken(inout char[] xsrc, inout char[] token) {
 		int slice;
-		xsrc = stripl(xsrc);
-		if (!xsrc.length) {
-			return notoken;
-		}
+		char[]token;
 		if (xsrc[0] != '<') {
 			slice = readUntil(xsrc,"<");
 			token = xsrc[0..slice];
 			xsrc = xsrc[slice..$];
-			return pcdata;
+			debug(xml)writefln("I found cdata text: %s",token);
+			parent.addCdata(token);
+			return 0;
 		} 
+		xsrc = xsrc[1..$];
 		
 		// types of tags, gotta make sure we find the closing > (or ]]> in the case of ucdata)
-		switch(xsrc[1]) {
+		switch(xsrc[0]) {
 		case '/':
 			// closing tag!
 			slice = readUntil(xsrc,">");
-			slice += ">".length;
-			if (slice>xsrc.length) slice = xsrc.length;
-			token = xsrc[0..slice];
-			xsrc = xsrc[slice..$];
-			return ctag;
+			token = strip(xsrc[1..slice]);
+			xsrc = xsrc[slice+1..$];
+			debug(xml)writefln("I found a closing tag (yikes):%s!",token);
+			if (token.icmp(parent.getName()) == 0) {
+				return 1;
+			}
+			throw new XmlError("Wrong close tag?");
 		case '?':
 			// processing instruction!
-			slice = readUntil(xsrc,"?>");
-			slice += "?>".length;
-			if (slice>xsrc.length) slice = xsrc.length;
-			token = xsrc[0..slice];
-			xsrc = xsrc[slice..$];
-			return procinst;
+			// rip off <?
+			xsrc = stripl(xsrc[1..$]);
+			// rip off name
+			char[]name = getWSToken(xsrc);
+			// rip off attributes while looking for ?>
+			debug(xml)writefln("Got a %s XML processing instruction",name);
+			XmlPI newnode = new XmlPI(name);
+			xsrc = stripl(xsrc);
+			while(xsrc.length >= 2 && xsrc[0..2] != "?>") {
+				parseAttribute(newnode,xsrc);
+			}
+			// make sure that the ?> is there and rip it off
+			if (xsrc[0..2] != "?>") throw new XmlError("Could not find the end to xml processing instruction "~name);
+			xsrc = xsrc[2..$];
+			parent.addChild(newnode);
+			return 0;
 		case '!':
-			// 12 is the magic number that allows for the empty cdata string ![CDATA[]]>
-			if (xsrc.length >= 12 && xsrc[2..9].cmp("[CDATA[") == 0) {
+			xsrc = stripl(xsrc[1..$]);
+			// 10 is the magic number that allows for the empty cdata string [CDATA[]]>
+			if (xsrc.length >= 10 && xsrc[0..7].cmp("[CDATA[") == 0) {
 				// unparsed cdata!
+				xsrc = xsrc[7..$];
 				slice = readUntil(xsrc,"]]>");
-				slice += "]]>".length;
-				if (slice>xsrc.length) slice = xsrc.length;
 				token = xsrc[0..slice];
-				xsrc = xsrc[slice..$];
-				return ucdata;
+				xsrc = xsrc[slice+3..$];
+				debug(xml)writefln("I found cdata text: %s",token);
+				parent.addCdata(token);
+				return 0;
 			// make sure we parse out comments, minimum length for this is 7 (<!---->)
-			} else if (xsrc.length >= 7 && xsrc[2..4].cmp("--") == 0) {
-				// a comment...which will just get ignored later
+			} else if (xsrc.length >= 5 && xsrc[0..2].cmp("--") == 0) {
+				xsrc = xsrc[2..$];
 				slice = readUntil(xsrc,"-->");
-				slice += "-->".length;
-				if (slice>xsrc.length) slice = xsrc.length;
 				token = xsrc[0..slice];
-				xsrc = xsrc[slice..$];
-				return comment;
+				xsrc = xsrc[slice+3..$];
+				// XXX we probably want to do something with these
+				return 0;
 			}
 			// xml instruction is the default for this case
 			slice = readUntil(xsrc,">");
@@ -467,16 +384,52 @@ class XmlNode
 			if (slice>xsrc.length) slice = xsrc.length;
 			token = xsrc[0..slice];
 			xsrc = xsrc[slice..$];
-			return xmlinst;
+			// XXX we probably want to do something with these
+			return 0;
 		default:
 			// just a regular old tag
-			slice = readUntil(xsrc,">");
-			slice += ">".length;
-			if (slice>xsrc.length) slice = xsrc.length;
-			token = xsrc[0..slice];
-			xsrc = xsrc[slice..$];
-			return otag;
+			// rip off name
+			char[]name = getWSToken(xsrc);
+			// rip off attributes while looking for ?>
+			debug(xml)writefln("Got a %s XML processing instruction",name);
+			XmlNode newnode = new XmlNode(name);
+			xsrc = stripl(xsrc);
+			while(xsrc.length && xsrc[0] != '/' && xsrc[0] != '>') {
+				parseAttribute(newnode,xsrc);
+			}
+			// check for self-closing tag
+			parent.addChild(newnode);
+			if (xsrc[0] == '/') {
+				// strip off the / and go about business as normal
+				xsrc = stripl(xsrc[1..$]);
+				// check for >
+				if (!xsrc.length || xsrc[0] != '>') throw new XmlError("Unable to find end of "~name~" tag");
+				xsrc = stripl(xsrc[1..$]);
+				debug(xml)writefln("self-closing tag!");
+				return 0;
+			} 
+			// check for >
+			if (!xsrc.length || xsrc[0] != '>') throw new XmlError("Unable to find end of "~name~" tag");
+			xsrc = stripl(xsrc[1..$]);
+			// now that we've added all the attributes to the node, pass the rest of the string and the current node to the next node
+			int ret;
+			try {
+				while (xsrc.length) {
+					if ((ret = parseNode(newnode,xsrc)) == 1) {
+						break;
+					}
+				}
+			} catch (Exception e) {
+				throw new XmlMalformedSubnode(name~"\n"~e.toString());
+			}
+			// make sure we found our closing tag
+			// this is where we can get sloppy for stream parsing
+			if (!ret) {
+				// throw a missing closing tag exception
+				throw new XmlMissingEndTag(name);
+			}
 		}
+		return 0;
 	}
 
 	// read data until the delimiter is found, return the index where the delimiter starts
@@ -494,14 +447,14 @@ class XmlNode
 	private char[]getWSToken(inout char[]input) {
 		input = stripl(input);
 		int i;
-		for(i=0;input.length > i && !isspace(input[i]);i++){}
+		for(i=0;i<input.length && !isspace(input[i]) && input[i] != '?' && input[i] != '>';i++){}
 		auto ret = input[0..i];
 		input = input[i..$];
 		return ret;
 	}
 
 	// this code is now officially prettified
-	private void parseAttributes (XmlNode xml,char[]attrstr) {
+	private void parseAttribute (XmlNode xml,inout char[]attrstr,char[]term = "") {
 		char[]ripName(inout char[]input) {
 			int i;
 			for(i=0;i < input.length && !isspace(input[i]) && input[i] != '=';i++){}
@@ -523,25 +476,23 @@ class XmlNode
 		        return tmp;
 		}
 
+		// snag the name from the attribute string
+		char[]value,name = ripName(attrstr);
 		attrstr = stripl(attrstr);
-		while(attrstr.length) {
-			// snag the name from the attribute string
-			char[]value,name = ripName(attrstr);
-			attrstr = stripl(attrstr);
-			// check for = to make sure the attribute string is kosher
-			if (!attrstr.length) throw new XmlError("Unexpected end of attribute string near "~name);
-			if (attrstr[0] != '=') throw new XmlError("Missing = in attribute string with name "~name);
-			// rip off =
-			attrstr = attrstr[1..$];
-			attrstr = stripl(attrstr);
-			if (attrstr.length && (attrstr[0] == '"' || attrstr[0] == '\'')) {
-				value = ripValue(attrstr);
-			} else {
-				value = getWSToken(attrstr);
-			}
-			xml.setAttribute(name,value);
-			attrstr = stripl(attrstr);
+		// check for = to make sure the attribute string is kosher
+		if (!attrstr.length) throw new XmlError("Unexpected end of attribute string near "~name);
+		if (attrstr[0] != '=') throw new XmlError("Missing = in attribute string with name "~name);
+		// rip off =
+		attrstr = attrstr[1..$];
+		attrstr = stripl(attrstr);
+		if (attrstr.length && (attrstr[0] == '"' || attrstr[0] == '\'')) {
+			value = ripValue(attrstr);
+		} else {
+			value = getWSToken(attrstr);
 		}
+		debug(xml)writefln("Got attr %s and value \"%s\"",name,value);
+		xml.setAttribute(name,value);
+		attrstr = stripl(attrstr);
 	}
 
 	XmlNode[]parseXPath(char[]xpath,bool caseSensitive = false) {
