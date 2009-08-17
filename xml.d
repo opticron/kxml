@@ -605,6 +605,26 @@ class XmlNode
 		truncxpath = "";
 		return "";
 	}
+
+	// opIndex accessors
+	char[]opIndex(char[]attr) {
+		return getAttribute(attr);
+	}
+
+	XmlNode opIndex(int childnum) {
+		if (childnum < _children.length) return _children[childnum];
+		return null;
+	}
+
+	XmlNode opIndexAssign(char[]value,char[]name) {
+		return setAttribute(name,value);
+	}
+
+	XmlNode opIndexAssign(XmlNode x,int childnum) {
+		if (childnum > _children.length) throw new Exception("Child element assignment is outside of array bounds");
+		_children[childnum] = x;
+		return this;
+	}
 }
 
 // class specializations for different types of nodes, such as cdata and instructions
