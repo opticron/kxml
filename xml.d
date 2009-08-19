@@ -552,7 +552,7 @@ class XmlNode
 			value = getWSToken(attrstr);
 		}
 		debug(xml)writefln("Got attr %s and value \"%s\"",name,value);
-		xml.setAttribute(name,value);
+		xml._attributes[name] = value;
 		attrstr = stripl(attrstr);
 	}
 
