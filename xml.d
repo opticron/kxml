@@ -220,6 +220,11 @@ class XmlNode
 		return false;
 	}
 
+	// this should be done with casting tests
+	bool isXmlComment() {
+		return false;
+	}
+
 	// this makes life easier for those looking to pull cdata from tags that only have that as the single subnode
 	char[]getCData() {
 		if (_children.length && _children[0].isCData) {
@@ -315,7 +320,9 @@ class XmlNode
 		token = strip(xsrc[0..slice]);
 		xsrc = xsrc[slice..$];
 		debug(xml)writefln("I found cdata text: %s",token);
-		parent.addCData(token);
+		auto cd = new CData;
+		cd._cdata = token;
+		parent.addChild(cd);
 	}
 
 	// parse out a close tag and make sure it's the one we want
@@ -363,7 +370,9 @@ class XmlNode
 		token = xsrc[0..slice];
 		xsrc = xsrc[slice+3..$];
 		debug(xml)writefln("I found cdata text: %s",token);
-		parent.addCData(token);
+		auto cd = new CData;
+		cd._cdata = token;
+		parent.addChild(cd);
 	}
 
 	// rip off a comment
@@ -569,7 +578,7 @@ class XmlNode
 			// we were searching for nodes, and this is one
 			debug(xpath) writefln("Found a node we want! name is: %s",getName);
 			retarr ~= this;
-		} else foreach(child;getChildren) if (!child.isCData && child.matchXPathAttr(attrmatch,caseSensitive)) {
+		} else foreach(child;getChildren) if (!child.isCData && !child.isXmlComment && !child.isXmlPI && child.matchXPathAttr(attrmatch,caseSensitive)) {
 			if (!nextnode.length || (caseSensitive && child.getName == nextnode) || (!caseSensitive && !child.getName().icmp(nextnode))) {
 				// child that matches the search string, pass on the truncated string
 				debug(xpath) writefln("Sending %s to %s",truncxpath,child.getName);
@@ -579,7 +588,7 @@ class XmlNode
 		// we aren't on us, but check to see if we're looking for a deep path, and delve in accordingly
 		// currently this means, the entire tree could be traversed multiple times for a single query...eww
 		// and the query // should generate a list of the entire tree, in the order the elements specifically appear
-		if (isDeepPath(xpath)) foreach(child;getChildren) if (!child.isCData) {
+		if (isDeepPath(xpath)) foreach(child;getChildren) if (!child.isCData && !child.isXmlComment && !child.isXmlPI) {
 			// throw the exact same xpath at each child
 			retarr ~= child.parseXPath(xpath,caseSensitive);
 		}
@@ -685,23 +694,29 @@ class CData : XmlNode
 {
 	private char[] _cdata;
 
+	// assumes data is coming from a user program, possibly with unescaped data
 	this(char[] cdata) {
-		_cdata = cdata;
+		setCData(cdata);
 	}
+
+	this(){}
 
 	override bool isCData() {
 		return true;
 	}
 
+	// this is for user programs and returns unescaped data
 	override char[] getCData() {
 		return xmlDecode(_cdata);
 	}
 
+	// assumes data is coming from a user program, possibly with unescaped data
 	CData setCData(char[]cdata) {
 		_cdata = xmlEncode(cdata);
 		return this;
 	}
 
+	// the following two functions assume that data is going out to real xml, and so it should be escaped
 	protected override char[] toString() {
 		return _cdata;
 	}
@@ -836,8 +851,8 @@ class XmlComment : XmlNode {
 		super("");
 	}
 
-	override bool isXmlPI() {
-		return false;
+	override bool isXmlComment() {
+		return true;
 	}
 
 	override char[] getCData() {
