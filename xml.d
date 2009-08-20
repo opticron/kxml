@@ -278,16 +278,17 @@ class XmlNode
 
 	// this is a dump of the xml structure in to pretty, tabbed format
 	char[] write(char[]indent="") {
-		char[]tmp = indent~asOpenTag()~"\n";
+		char[]tmp;
+		if (getName.length) tmp = indent~asOpenTag()~"\n";
 
 		if (_children.length)
 		{
 			for (int i = 0; i < _children.length; i++)
 			{
 				// these guys are supposed to do their own indentation
-				tmp ~= _children[i].write(indent~"	"); 
+				tmp ~= _children[i].write(indent~(getName.length?"	":"")); 
 			}
-			tmp ~= indent~asCloseTag()~"\n";
+			if (getName.length) tmp ~= indent~asCloseTag()~"\n";
 		}
 		return tmp;
 	
