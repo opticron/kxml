@@ -956,6 +956,7 @@ char[] xmlEncode(char[] src) {
 /// Convert xml-encoded special characters such as &amp;amp; back to &amp;.
 char[] xmlDecode(char[] src) {
 	char[] tempStr;
+	// XXX need to decode things like &#00C9; correctly
         tempStr = replace(src    , "&lt;",  "<");
         tempStr = replace(tempStr, "&gt;",  ">");
         tempStr = replace(tempStr, "&quot;",  "\"");
