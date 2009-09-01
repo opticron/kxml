@@ -14,10 +14,16 @@
  */
 
 module kxml.xml;
-
-import std.string;
-import std.stdio;
-import std.ctype:isspace;
+version(Tango) {
+	import tango.text.Util:isspace=isSpace,stripl=triml,strip=trim,stripr=trimr,find=locatePattern,split,replace=substitute;
+	import tango.text.convert.Integer:tostring=toString;
+	import tango.text.convert.Float:tostring=toString;
+	import tango.text.Ascii:icmp=icompare,cmp=compare;
+} else {
+	import std.string:tostring=toString,strip,stripr,stripl,split,replace,find,cmp,icmp;
+	import std.stdio;
+	import std.ctype:isspace;
+}
 
 /**
  * Read an entire string into a tree of XmlNodes.
@@ -154,15 +160,15 @@ class XmlNode
 	/**
 	 * Set an attribute to an integer value (stored internally as a string).
 	 * The attribute is created if it doesn't exist.*/
-	XmlNode setAttribute(char[] name, int value) {
-		return setAttribute(name, std.string.toString(value));
+	XmlNode setAttribute(char[] name, long value) {
+		return setAttribute(name, tostring(value));
 	}
 
 	/**
 	 * Set an attribute to a float value (stored internally as a string).
 	 * The attribute is created if it doesn't exist.*/
 	XmlNode setAttribute(char[] name, float value) {
-		return setAttribute(name, std.string.toString(value));
+		return setAttribute(name, tostring(value));
 	}
 
 	// Remove the attribute with name.
@@ -565,7 +571,7 @@ class XmlNode
 		char[]nextnode = getNextNode(xpath,truncxpath);
 		char[]attrmatch = "";
 		// need to be able to split the attribute match off even when it doesn't have [] around it
-		int offset = nextnode.find('[');
+		int offset = nextnode.find("[");
 		if (offset != -1) {
 			// rip out attribute string
 			attrmatch = nextnode[offset..$];
@@ -620,7 +626,7 @@ class XmlNode
 		foreach(attr;attrlist) {
 			debug(xpath)writefln("matching on %s",attr);
 			char[]datamatch = "";
-			int sep = attr.find('=');
+			int sep = attr.find("=");
 			// strip off the @ and separate the attribute and value if it exists
 			if (sep != -1) {
 				datamatch = attr[sep+1..$];
@@ -657,7 +663,7 @@ class XmlNode
 	// this does not modify the incoming string, only pulls a slice out of it
 	private char[]getNextNode(char[]xpath,out char[]truncxpath) {
 		if (isDeepPath(xpath)) xpath = xpath[2..$];
-		char[][]nodes = std.string.split(xpath,"/");
+		char[][]nodes = split(xpath,"/");
 		if (nodes.length) {
 			// leading slashes will be removed in recursive calls 
 			if (nodes.length > 1) truncxpath = xpath[nodes[0].length..$];
@@ -767,7 +773,7 @@ class CData : XmlNode
 	/**
 	 * Set an attribute to an integer value (stored internally as a string).
 	 * The attribute is created if it doesn't exist.*/
-	override XmlNode setAttribute(char[] name, int value) {
+	override XmlNode setAttribute(char[] name, long value) {
 		throw new XmlError("CData nodes do not have attributes to set.");
 	}
 
@@ -915,7 +921,7 @@ class XmlComment : XmlNode {
 	/**
 	 * Set an attribute to an integer value (stored internally as a string).
 	 * The attribute is created if it doesn't exist.*/
-	override XmlNode setAttribute(char[] name, int value) {
+	override XmlNode setAttribute(char[] name, long value) {
 		throw new XmlError("Comment nodes do not have attributes to set.");
 	}
 
