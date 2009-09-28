@@ -20,9 +20,11 @@ version(Tango) {
 	import tango.text.convert.Float:tostring=toString;
 	import tango.text.Ascii:icmp=icompare,cmp=compare;
 } else {
-	import std.string:tostring=toString,strip,stripr,stripl,split,replace,find,cmp,icmp;
+	import std.string:tostring=toString,strip,stripr,stripl,split,replace,find,cmp,icmp,atoi;
 	import std.stdio;
 	import std.ctype:isspace;
+	import std.regexp:sub,RegExp;
+	import std.utf:toUTF8;
 }
 
 /**
@@ -961,13 +963,46 @@ char[] xmlEncode(char[] src) {
 
 /// Convert xml-encoded special characters such as &amp;amp; back to &amp;.
 char[] xmlDecode(char[] src) {
+	writefln("xmldecoding string %s",src);
 	char[] tempStr;
-	// XXX need to decode things like &#00C9; correctly
         tempStr = replace(src    , "&lt;",  "<");
         tempStr = replace(tempStr, "&gt;",  ">");
         tempStr = replace(tempStr, "&quot;",  "\"");
         tempStr = replace(tempStr, "&amp;", "&");
+	tempStr = std.regexp.sub(tempStr,"&#[xX]?\\d{1,8};",(RegExp m) {
+		auto cnum = m.match(0)[2..$-1];
+		dchar dnum;
+		writefln("decoding character entity %s",cnum);
+		if (cnum[0] == 'x' || cnum[0] == 'X') {
+			dnum = hex2dchar(cnum[1..$]);
+		} else {
+			dnum = cast(dchar)atoi(cnum);
+		}
+		return toUTF8([dnum]);
+	},"g");
         return tempStr;
+}
+
+dchar hex2dchar (char[]hex) {
+	dchar res;
+	foreach(digit;hex) {
+		res <<= 4;
+		res |= toHVal(digit);
+	}
+	return res;
+}
+
+dchar toHVal(char digit) {
+	if (digit >= '0' && digit <= '9') {
+		return digit-'0';
+	}
+	if (digit >= 'a' && digit <= 'f') {
+		return digit-'a';
+	}
+	if (digit >= 'A' && digit <= 'F') {
+		return digit-'A';
+	}
+	return 0;
 }
 
 unittest {
