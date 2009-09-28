@@ -958,6 +958,7 @@ char[] xmlEncode(char[] src) {
         tempStr = replace(tempStr, "<", "&lt;");
         tempStr = replace(tempStr, ">", "&gt;");
         tempStr = replace(tempStr, "\"", "&quot;");
+        tempStr = replace(tempStr, "'", "&apos;");
         return tempStr;
 }
 
@@ -969,6 +970,7 @@ char[] xmlDecode(char[] src) {
         tempStr = replace(tempStr, "&gt;",  ">");
         tempStr = replace(tempStr, "&quot;",  "\"");
         tempStr = replace(tempStr, "&amp;", "&");
+        tempStr = replace(tempStr, "&apos;", "'");
 	tempStr = std.regexp.sub(tempStr,"&#[xX]?\\d{1,8};",(RegExp m) {
 		auto cnum = m.match(0)[2..$-1];
 		dchar dnum;
