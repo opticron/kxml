@@ -971,15 +971,16 @@ char[] xmlDecode(char[] src) {
         tempStr = replace(tempStr, "&quot;",  "\"");
         tempStr = replace(tempStr, "&amp;", "&");
         tempStr = replace(tempStr, "&apos;", "'");
-	tempStr = std.regexp.sub(tempStr,"&#[xX]?\\d{1,8};",(RegExp m) {
+	// take care of decimal character entities
+	tempStr = std.regexp.sub(tempStr,"&#\\d{1,8};",(RegExp m) {
 		auto cnum = m.match(0)[2..$-1];
-		dchar dnum;
-		writefln("decoding character entity %s",cnum);
-		if (cnum[0] == 'x' || cnum[0] == 'X') {
-			dnum = hex2dchar(cnum[1..$]);
-		} else {
-			dnum = cast(dchar)atoi(cnum);
-		}
+		dchar dnum = cast(dchar)atoi(cnum);
+		return toUTF8([dnum]);
+	},"g");
+	// take care of hex character entities
+	tempStr = std.regexp.sub(tempStr,"&#[xX][0-9a-fA-F]{1,8};",(RegExp m) {
+		auto cnum = m.match(0)[3..$-1];
+		dchar dnum = hex2dchar(cnum[1..$]);
 		return toUTF8([dnum]);
 	},"g");
         return tempStr;
