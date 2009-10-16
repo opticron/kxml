@@ -964,7 +964,6 @@ char[] xmlEncode(char[] src) {
 
 /// Convert xml-encoded special characters such as &amp;amp; back to &amp;.
 char[] xmlDecode(char[] src) {
-	writefln("xmldecoding string %s",src);
 	char[] tempStr;
         tempStr = replace(src    , "&lt;",  "<");
         tempStr = replace(tempStr, "&gt;",  ">");
