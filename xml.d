@@ -37,7 +37,7 @@ version(Tango) {
  * --------------------------------*/
 XmlNode readDocument(char[]src)
 {
-	XmlNode root = new XmlNode("");
+	XmlNode root = new XmlNode(null);
 	root.addChildren(src);
 	return root;
 }
@@ -75,7 +75,7 @@ class XmlMissingEndTag : XmlError {
 class XmlCloseTag : XmlError {
 	// Throws an exception with the current line number and an error message.
 	this() {
-		super("");
+		super(null);
 	}
 }
 
@@ -244,7 +244,7 @@ class XmlNode
 
 	protected char[] asOpenTag() {
 		if (_name.length == 0) {
-			return "";
+			return null;
 		}
 		char[] s = "<" ~ _name ~ genAttrString();
 
@@ -257,12 +257,12 @@ class XmlNode
 
 	protected char[] asCloseTag() {
 		if (_name.length == 0) {
-			return "";
+			return null;
 		}
 		if (_children.length != 0)
 			return "</" ~ _name ~ ">";
 		else
-			return ""; // don't need it.  Leaves close themselves via the <blah /> syntax.
+			return null; // don't need it.  Leaves close themselves via the <blah /> syntax.
 	}
 
 	protected bool isLeaf() {
@@ -281,7 +281,7 @@ class XmlNode
 	}
 
 	// this is a dump of the xml structure in to pretty, tabbed format
-	char[] write(char[]indent="") {
+	char[] write(char[]indent=null) {
 		char[]tmp;
 		if (getName.length) tmp = indent~asOpenTag()~"\n";
 
@@ -520,7 +520,7 @@ class XmlNode
 	}
 
 	// this code is now officially prettified
-	private void parseAttribute (XmlNode xml,inout char[]attrstr,char[]term = "") {
+	private void parseAttribute (XmlNode xml,inout char[]attrstr,char[]term = null) {
 		char[]ripName(inout char[]input) {
 			int i;
 			for(i=0;i < input.length && !isspace(input[i]) && input[i] != '=';i++){}
@@ -567,7 +567,7 @@ class XmlNode
 		debug(xpath) writefln("Got xpath %s in node %s",xpath,getName);
 		char[]truncxpath;
 		char[]nextnode = getNextNode(xpath,truncxpath);
-		char[]attrmatch = "";
+		char[]attrmatch = null;
 		// need to be able to split the attribute match off even when it doesn't have [] around it
 		int offset = nextnode.find("[");
 		if (offset != -1) {
@@ -623,7 +623,7 @@ class XmlNode
 		char[][]attrlist = attrstr.split(" and ");
 		foreach(attr;attrlist) {
 			debug(xpath)writefln("matching on %s",attr);
-			char[]datamatch = "";
+			char[]datamatch = null;
 			int sep = attr.find("=");
 			// strip off the @ and separate the attribute and value if it exists
 			if (sep != -1) {
@@ -668,8 +668,8 @@ class XmlNode
 			return nodes[0];
 		}
 		// i'm not sure this can occur unless the string was blank to begin with...
-		truncxpath = "";
-		return "";
+		truncxpath = null;
+		return null;
 	}
 
 	// opIndex accessors
@@ -730,7 +730,7 @@ class CData : XmlNode
 		return indent~toString()~"\n";
 	}
 
-	protected char[] asCloseTag() { return ""; }
+	protected char[] asCloseTag() { return null; }
 
 	protected bool isLeaf() {
 		return true;
@@ -809,24 +809,24 @@ class XmlPI : XmlNode {
 	}
 
 	override char[] getCData() {
-		return "";
+		return null;
 	}
 	override char[] toString() {
 		return asOpenTag();
 	}
 
-	protected override char[] write(char[]indent="") {
+	protected override char[] write(char[]indent=null) {
 		return indent~asOpenTag()~"\n";
 	}
 	protected char[] asOpenTag() {
 		if (_name.length == 0) {
-			return "";
+			return null;
 		}
 		char[] s = "<?" ~ _name ~ genAttrString() ~ "?>";
 		return s;
 	}
 
-	protected char[] asCloseTag() { return ""; }
+	protected char[] asCloseTag() { return null; }
 
 	protected bool isLeaf() {
 		return true;
@@ -853,7 +853,7 @@ class XmlComment : XmlNode {
 	char[]comment;
 	this(char[]incomment) {
 		comment = incomment;
-		super("");
+		super(null);
 	}
 
 	override bool isXmlComment() {
@@ -861,24 +861,24 @@ class XmlComment : XmlNode {
 	}
 
 	override char[] getCData() {
-		return "";
+		return null;
 	}
 	override char[] toString() {
 		return asOpenTag();
 	}
 
-	protected override char[] write(char[]indent="") {
+	protected override char[] write(char[]indent=null) {
 		return indent~asOpenTag()~"\n";
 	}
 	protected char[] asOpenTag() {
 		if (_name.length == 0) {
-			return "";
+			return null;
 		}
 		char[] s = "<!--" ~ comment  ~ "-->";
 		return s;
 	}
 
-	protected char[] asCloseTag() { return ""; }
+	protected char[] asCloseTag() { return null; }
 
 	protected bool isLeaf() {
 		return true;
