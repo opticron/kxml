@@ -235,11 +235,11 @@ class XmlNode
 
 	// this makes life easier for those looking to pull cdata from tags that only have that as the single subnode
 	char[]getCData() {
-		if (_children.length && _children[0].isCData) {
-			return _children[0].getCData;
-		} else {
-			return "";
+		char[]tmp;
+		foreach(child;_children) {
+			tmp ~= child.toString(); 
 		}
+		return tmp;
 	}
 
 	protected char[] asOpenTag() {
@@ -273,12 +273,8 @@ class XmlNode
 	char[] toString() {
 		char[]tmp = asOpenTag();
 
-		if (_children.length)
-		{
-			for (int i = 0; i < _children.length; i++)
-			{
-				tmp ~= _children[i].toString(); 
-			}
+		if (_children.length) {
+			tmp ~= getCData();
 			tmp ~= asCloseTag();
 		}
 		return tmp;
