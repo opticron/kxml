@@ -270,7 +270,7 @@ class XmlNode
 	}
 
 	// this is a dump of the xml structure to a string with no newlines and no linefeeds
-	string toString() {
+	override string toString() {
 		auto tmp = asOpenTag();
 
 		if (_children.length) {
@@ -730,9 +730,9 @@ class CData : XmlNode
 		return indent~toString()~"\n";
 	}
 
-	protected string asCloseTag() { return null; }
+	protected override string asCloseTag() { return null; }
 
-	protected bool isLeaf() {
+	protected override bool isLeaf() {
 		return true;
 	}
 
@@ -818,7 +818,7 @@ class XmlPI : XmlNode {
 	protected override string write(string indent=null) {
 		return indent~asOpenTag()~"\n";
 	}
-	protected string asOpenTag() {
+	protected override string asOpenTag() {
 		if (_name.length == 0) {
 			return null;
 		}
@@ -826,9 +826,9 @@ class XmlPI : XmlNode {
 		return s;
 	}
 
-	protected string asCloseTag() { return null; }
+	protected override string asCloseTag() { return null; }
 
-	protected bool isLeaf() {
+	protected override bool isLeaf() {
 		return true;
 	}
 
@@ -870,7 +870,7 @@ class XmlComment : XmlNode {
 	protected override string write(string indent=null) {
 		return indent~asOpenTag()~"\n";
 	}
-	protected string asOpenTag() {
+	protected override string asOpenTag() {
 		if (_name.length == 0) {
 			return null;
 		}
@@ -878,9 +878,9 @@ class XmlComment : XmlNode {
 		return s;
 	}
 
-	protected string asCloseTag() { return null; }
+	protected override string asCloseTag() { return null; }
 
-	protected bool isLeaf() {
+	protected override bool isLeaf() {
 		return true;
 	}
 
