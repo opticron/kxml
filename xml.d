@@ -20,7 +20,12 @@ version(Tango) {
 	import tango.text.convert.Float:tostring=toString;
 	import tango.text.Ascii:icmp=icompare,cmp=compare;
 } else {
-	import std.string:tostring=toString,strip,stripr,stripl,split,replace,find,cmp,icmp,atoi;
+	version(D_Version2) {
+		import std.conv:to;
+		import std.string:strip,stripr,stripl,split,replace,find=indexOf,cmp,icmp,atoi;
+	} else {
+		import std.string:tostring=toString,strip,stripr,stripl,split,replace,find,cmp,icmp,atoi;
+	}
 	import std.stdio;
 	import std.ctype:isspace;
 	import std.regexp:sub,RegExp;
@@ -163,14 +168,22 @@ class XmlNode
 	 * Set an attribute to an integer value (stored internally as a string).
 	 * The attribute is created if it doesn't exist.*/
 	XmlNode setAttribute(string name, long value) {
-		return setAttribute(name, tostring(value));
+		version(D_Version2) {
+			return setAttribute(name, to!(string)(value));
+		} else {
+			return setAttribute(name, tostring(value));
+		}
 	}
 
 	/**
 	 * Set an attribute to a float value (stored internally as a string).
 	 * The attribute is created if it doesn't exist.*/
 	XmlNode setAttribute(string name, float value) {
-		return setAttribute(name, tostring(value));
+		version(D_Version2) {
+			return setAttribute(name, to!(string)(value));
+		} else {
+			return setAttribute(name, tostring(value));
+		}
 	}
 
 	// Remove the attribute with name.
@@ -969,7 +982,11 @@ string xmlDecode(string src) {
 	// take care of decimal character entities
 	tempStr = std.regexp.sub(tempStr,"&#\\d{1,8};",(RegExp m) {
 		auto cnum = m.match(0)[2..$-1];
-		dchar dnum = cast(dchar)atoi(cnum);
+		version(D_Version2) {
+			dchar dnum = cast(dchar)to!(int)(cnum);
+		} else {
+			dchar dnum = cast(dchar)atoi(cnum);
+		}
 		return toUTF8([dnum]);
 	},"g");
 	// take care of hex character entities
