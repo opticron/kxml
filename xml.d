@@ -424,7 +424,7 @@ class XmlNode
 			if (!xsrc.length || xsrc[0] != '>') throw new XmlError("Unable to find end of "~name~" tag");
 			xsrc = stripl(xsrc[1..$]);
 			debug(xml)writefln("self-closing tag!");
-			return 0;
+			return;
 		} 
 		// check for >
 		if (!xsrc.length || xsrc[0] != '>') throw new XmlError("Unable to find end of "~name~" tag");
