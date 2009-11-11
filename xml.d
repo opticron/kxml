@@ -42,8 +42,14 @@ version(Tango) {
  * --------------------------------*/
 XmlNode readDocument(string src)
 {
+	string pointcpy = src;
 	XmlNode root = new XmlNode(null);
-	root.addChildren(src);
+	try {
+		root.addChildren(src);
+	} catch (XmlError e) {
+		writefln("Caught exception from input string:\n%s",pointcpy);
+		throw e;
+	}
 	return root;
 }
 
