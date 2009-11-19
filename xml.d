@@ -566,10 +566,14 @@ class XmlNode
 		// rip off =
 		attrstr = attrstr[1..$];
 		attrstr = stripl(attrstr);
-		if (attrstr.length && (attrstr[0] == '"' || attrstr[0] == '\'')) {
-			value = ripValue(attrstr);
+		if (attrstr.length) {
+			if (attrstr[0] == '"' || attrstr[0] == '\'') {
+				value = ripValue(attrstr);
+			} else {
+				throw new XmlError("Unquoted attribute value for "~xml.getName~", starting at: "~attrstr);
+			}
 		} else {
-			value = getWSToken(attrstr);
+			throw new XmlError("Unexpected end of input for attribute "~name~" in node "~xml.getName);
 		}
 		debug(xml)writefln("Got attr %s and value \"%s\"",name,value);
 		xml._attributes[name] = value;
