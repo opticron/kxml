@@ -9,7 +9,7 @@
  * History:
  * Most of the code in this module originally came from Andy Friesen's Xmld.
  * Xmld was unmaintained, but Andy had placed it in the public domain.  This 
- * code builds off the Yage work to remain mostly API compatible, but the
+ * code builds off the Xmld work to remain mostly API compatible, but the
  * internal parser has been completely rewritten.
  */
 
@@ -53,44 +53,13 @@ XmlNode readDocument(string src)
 	return root;
 }
 
-// An exception thrown on an xml parsing error.
+/// An exception thrown on an xml parsing error.
 class XmlError : Exception {
 	// Throws an exception with the current line number and an error message.
 	this(string msg) {
 		super(msg);
 	}
 }
-
-// An exception thrown on an xml parsing error.
-class XmlMalformedAttribute : XmlError {
-	/// Throws an exception with the current line number and an error message.
-	this(string part,string msg) {
-		super("Malformed Attribute " ~ part ~ ": " ~ msg ~ "\n");
-	}
-}
-/// An exception thrown on an xml parsing error.
-class XmlMalformedSubnode : XmlError {
-	// Throws an exception with the current line number and an error message.
-	this(string name) {
-		super("Malformed Subnode of " ~ name);
-	}
-}
-/// An exception thrown on an xml parsing error.
-class XmlMissingEndTag : XmlError {
-	// Throws an exception with the current line number and an error message.
-	this(string name) {
-		super("Missing End Tag " ~ name ~ "\n");
-	}
-}
-/// An exception thrown on an xml parsing error.
-class XmlCloseTag : XmlError {
-	// Throws an exception with the current line number and an error message.
-	this() {
-		super(null);
-	}
-}
-
-
 
 /**
  * XmlNode represents a single xml node and has methods for modifying
@@ -446,20 +415,16 @@ class XmlNode
 		xsrc = stripl(xsrc[1..$]);
 		// now that we've added all the attributes to the node, pass the rest of the string and the current node to the next node
 		int ret;
-		try {
-			while (xsrc.length) {
-				if ((ret = parseNode(newnode,xsrc)) == 1) {
-					break;
-				}
+		while (xsrc.length) {
+			if ((ret = parseNode(newnode,xsrc)) == 1) {
+				break;
 			}
-		} catch (Exception e) {
-			throw new XmlMalformedSubnode(name~"\n"~e.toString());
 		}
 		// make sure we found our closing tag
 		// this is where we can get sloppy for stream parsing
 		if (!ret) {
 			// throw a missing closing tag exception
-			throw new XmlMissingEndTag(name);
+			throw new XmlError("Missing end tag for "~name);
 		}
 	}
 
