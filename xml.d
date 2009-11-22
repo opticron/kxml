@@ -422,10 +422,8 @@ class XmlNode
 		}
 		// make sure we found our closing tag
 		// this is where we can get sloppy for stream parsing
-		if (!ret) {
-			// throw a missing closing tag exception
-			throw new XmlError("Missing end tag for "~name);
-		}
+		// throw a missing closing tag exception
+		if (!ret) throw new XmlError("Missing end tag for "~name);
 	}
 
 	// returns everything after the first node TREE (a node can be text as well)
@@ -446,6 +444,10 @@ class XmlNode
 		
 		// types of tags, gotta make sure we find the closing > (or ]]> in the case of ucdata)
 		switch(xsrc[0]) {
+		default:
+			// just a regular old tag
+			parseOpenTag(parent,xsrc);
+			break;
 		case '/':
 			// closing tag!
 			parseCloseTag(parent,xsrc);
@@ -469,10 +471,6 @@ class XmlNode
 			}
 			// xml instruction is the default for this case
 			parseXMLInst(parent,xsrc);
-			break;
-		default:
-			// just a regular old tag
-			parseOpenTag(parent,xsrc);
 			break;
 		}
 		return ret;
@@ -514,7 +512,7 @@ class XmlNode
 			// rip off the starting quote
 		        input = input[1..$];
 			// find the end of the string we want
-		        for(x = 0;(input[x] != quot || (input[x] == quot && x && input[x-1] == '\\')) && x < input.length;x++) {
+		        for(x = 0;input[x] != quot && x < input.length;x++) {
 		        }
 		        string tmp = input[0..x];
 			// add one to leave off the quote
