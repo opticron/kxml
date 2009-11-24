@@ -31,7 +31,7 @@ version(Tango) {
  * Example:
  * --------------------------------
  * XmlNode xml;
- * string xmlstring = "<node attr="self closing"/>";
+ * string xmlstring = "<node attr=\"self closing\"/>";
  * xml = readDocument(xmlstring);
  * --------------------------------*/
 XmlNode readDocument(string src)
@@ -688,39 +688,40 @@ class XmlNode
 	}
 }
 
-// class specializations for different types of nodes, such as cdata and instructions
-// A node type for CData.
+/// A class specialization for CData nodes.
 class CData : XmlNode
 {
 	private string _cdata;
 
-	// assumes data is coming from a user program, possibly with unescaped data
+	/// Override the string constructor, assuming the data is coming from a user program, possibly with unescaped XML entities that need escaping.
 	this(string cdata) {
 		setCData(cdata);
 	}
 
 	this(){}
 
+	/// Override to ensure this node is recognized as a CData node.
 	override bool isCData() {
 		return true;
 	}
 
-	// this is for user programs and returns unescaped data
+	/// This function returns CData with decoded XML entities.
 	override string getCData() {
 		return xmlDecode(_cdata);
 	}
 
-	// assumes data is coming from a user program, possibly with unescaped data
+	/// This function assumes data is coming from user input, possibly with unescaped XML entities that need escaping.
 	CData setCData(string cdata) {
 		_cdata = xmlEncode(cdata);
 		return this;
 	}
 
-	// the following two functions assume that data is going out to real xml, and so it should be escaped
+	/// This outputs escaped XML entities for use on the network or in a document.
 	protected override string toString() {
 		return _cdata;
 	}
 
+	/// This outputs escaped XML entities for use on the network or in a document in pretty, tabbed format.
 	protected override string write(string indent) {
 		return indent~toString()~"\n";
 	}
@@ -731,69 +732,63 @@ class CData : XmlNode
 		return true;
 	}
 
+	/// This throws an exception because CData nodes do not have names.
 	override string getName() {
 		throw new XmlError("CData nodes do not have names to get.");
 	}
 
-	// Set the name of this XmlNode.
+	/// This throws an exception because CData nodes do not have names.
 	override void setName(string newName) {
 		throw new XmlError("CData nodes do not have names to set.");
 	}
 
-	// Does this XmlNode have an attribute with name?
+	/// This throws an exception because CData nodes do not have attributes.
 	override bool hasAttribute(string name) {
 		throw new XmlError("CData nodes do not have attributes.");
 	}
 
-	// Get the attribute with name, or return null if no attribute has that name.
+	/// This throws an exception because CData nodes do not have attributes.
 	override string getAttribute(string name) {
 		throw new XmlError("CData nodes do not have attributes to get.");
 	}
 
-	// Return an array of all attributes (by reference, no copy is made).
-	// the user should know that these may have html escapes
+	/// This throws an exception because CData nodes do not have attributes.
 	override string[string] getAttributes() {
 		throw new XmlError("CData nodes do not have attributes to get.");
 	}
 
-	/**
-	 * Set an attribute to a string value.  The attribute is created if it
-	 * doesn't exist.*/
+	/// This throws an exception because CData nodes do not have attributes.
 	override XmlNode setAttribute(string name, string value) {
 		throw new XmlError("CData nodes do not have attributes to set.");
 	}
 
-	/**
-	 * Set an attribute to an integer value (stored internally as a string).
-	 * The attribute is created if it doesn't exist.*/
+	/// This throws an exception because CData nodes do not have attributes.
 	override XmlNode setAttribute(string name, long value) {
 		throw new XmlError("CData nodes do not have attributes to set.");
 	}
 
-	/**
-	 * Set an attribute to a float value (stored internally as a string).
-	 * The attribute is created if it doesn't exist.*/
+	/// This throws an exception because CData nodes do not have attributes.
 	override XmlNode setAttribute(string name, float value) {
 		throw new XmlError("CData nodes do not have attributes to set.");
 	}
 
-	// Add an XmlNode child.
+	/// This throws an exception because CData nodes do not have children.
 	override XmlNode addChild(XmlNode newNode) {
 		throw new XmlError("Cannot add a child node to CData.");
 	}
 
-	// Add a child Node of cdata (text).
+	/// This throws an exception because CData nodes do not have children.
 	deprecated override XmlNode addCdata(string cdata) {
 		throw new XmlError("Cannot add a child node to CData.");
 	}
 
-	// make an alias so as not to break compatibility
+	/// This throws an exception because CData nodes do not have children.
 	override XmlNode addCData(string cdata) {
 		throw new XmlError("Cannot add a child node to CData.");
 	}
 }
 
-// A node type for xml instructions.
+/// A class specialization for XML instructions.
 class XmlPI : XmlNode {
 	this(string name) {
 		super(name);
@@ -843,7 +838,7 @@ class XmlPI : XmlNode {
 	}
 }
 
-// A node type for xml instructions.
+/// A class specialization for XML comments.
 class XmlComment : XmlNode {
 	string comment;
 	this(string incomment) {
