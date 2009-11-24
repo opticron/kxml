@@ -1,16 +1,10 @@
 /**
  * Copyright:  (c) 2009 William K. Moore, III (nyphbl8d (at) gmail (dot) com, opticron on freenode)
- * Authors:    Andy Friesen, William K. Moore, III
+ * Authors:    William K. Moore, III
  * License:    <a href="lgpl.txt">LGPL</a>
  *
- * Xml contains functions and classes for reading, parsing, and writing xml
+ * KXML contains functions and classes for reading, parsing, and writing xml
  * documents.
- *
- * History:
- * Most of the code in this module originally came from Andy Friesen's Xmld.
- * Xmld was unmaintained, but Andy had placed it in the public domain.  This 
- * code builds off the Xmld work to remain mostly API compatible, but the
- * internal parser has been completely rewritten.
  */
 
 module kxml.xml;
@@ -89,30 +83,30 @@ class XmlNode
 
 	static this(){}
 
-	// Construct an empty XmlNode.
+	/// Construct an empty XmlNode.
 	this(){}
 
-	// Construct and set the name of this XmlNode to name.
+	/// Construct and set the name of this XmlNode.
 	this(string name) {
 		_name = name;
 	}
 
-	// Get the name of this XmlNode.
+	/// Get the name of this XmlNode.
 	string getName() {
 		return _name;
 	}
 
-	// Set the name of this XmlNode.
+	/// Set the name of this XmlNode.
 	void setName(string newName) {
 		_name = newName;
 	}
 
-	// Does this XmlNode have an attribute with name?
+	/// Does this XmlNode have the specified attribute?
 	bool hasAttribute(string name) {
 		return (name in _attributes) !is null;
 	}
 
-	// Get the attribute with name, or return null if no attribute has that name.
+	/// Get the specified attribute, or return null if the XmlNode doesn't have that attribute.
 	string getAttribute(string name) {
 		if (name in _attributes)
 			return xmlDecode(_attributes[name]);
@@ -120,8 +114,7 @@ class XmlNode
 			return null;
 	}
 
-	// Return an array of all attributes (by reference, no copy is made).
-	// the user should know that these may have html escapes
+	/// Return an array of all attributes (does a single pass of XML entity decoding like &quot; -> ").
 	string[string] getAttributes() {
 		string[string]tmp;
 		// this is inefficient as it is run every time, but doesn't hurt parsing speed
@@ -131,17 +124,15 @@ class XmlNode
 		return tmp;
 	}
 
-	/**
-	 * Set an attribute to a string value.  The attribute is created if it
-	 * doesn't exist.*/
+	/// Set an attribute to a string value.
+	/// The attribute is created if it doesn't exist.
 	XmlNode setAttribute(string name, string value) {
 		_attributes[name] = xmlEncode(value);
 		return this;
 	}
 
-	/**
-	 * Set an attribute to an integer value (stored internally as a string).
-	 * The attribute is created if it doesn't exist.*/
+	/// Set an attribute to an integer value (stored internally as a string).
+	/// The attribute is created if it doesn't exist.
 	XmlNode setAttribute(string name, long value) {
 		version(D_Version2) {
 			return setAttribute(name, to!(string)(value));
@@ -150,9 +141,8 @@ class XmlNode
 		}
 	}
 
-	/**
-	 * Set an attribute to a float value (stored internally as a string).
-	 * The attribute is created if it doesn't exist.*/
+	/// Set an attribute to a float value (stored internally as a string).
+	/// The attribute is created if it doesn't exist.
 	XmlNode setAttribute(string name, float value) {
 		version(D_Version2) {
 			return setAttribute(name, to!(string)(value));
@@ -167,7 +157,7 @@ class XmlNode
 		return this;
 	}
 
-	/// Add a child.
+	/// Add a child node.
 	XmlNode addChild(XmlNode newNode) {
 		// let's bump things by increments of 10 to make them more efficient
 		if (_children.length+1%10==0) {
@@ -206,16 +196,19 @@ class XmlNode
 		return this;
 	}
 
+	/// Check to see if this node is a CData node.
 	// this should be done with casting tests
 	bool isCData() {
 		return false;
 	}
 
+	/// Check to see if this node is a XmlPI node.
 	// this should be done with casting tests
 	bool isXmlPI() {
 		return false;
 	}
 
+	/// Check to see if this node is a XmlComment node.
 	// this should be done with casting tests
 	bool isXmlComment() {
 		return false;
@@ -266,7 +259,7 @@ class XmlNode
 		return _children.length == 0;
 	}
 
-	// this is a dump of the xml structure to a string with no newlines and no linefeeds
+	/// This function dumps the xml structure to a string with no newlines and no linefeeds to be output.
 	override string toString() {
 		auto tmp = asOpenTag();
 
@@ -277,7 +270,7 @@ class XmlNode
 		return tmp;
 	}
 
-	// this is a dump of the xml structure in to pretty, tabbed format
+	/// This function dumps the xml structure in to pretty, tabbed format.
 	string write(string indent=null) {
 		string tmp;
 		if (getName.length) tmp = indent~asOpenTag()~"\n";
@@ -295,7 +288,7 @@ class XmlNode
 	
 	}
 
-	// add children from a character array containing xml
+	/// Add children from a string containing valid xml.
 	void addChildren(string xsrc) {
 		while (xsrc.length) {
 			// there may be multiple tag trees or cdata elements
@@ -303,7 +296,7 @@ class XmlNode
 		}
 	}
 
-	// add array of nodes directly into the current node
+	/// Add array of nodes directly into this node as children.
 	void addChildren(XmlNode[]newChildren) {
 		// let's bump things by increments of 10 to make them more efficient
 		if (_children.length+newChildren.length%10 < newChildren.length) {
@@ -558,6 +551,8 @@ class XmlNode
 		attrstr = stripl(attrstr);
 	}
 
+	/// Do an XPath search on this node and return all matching nodes.
+	/// This function does not perform any modifications to the tree and so does not support XML mutation.
 	XmlNode[]parseXPath(string xpath,bool caseSensitive = false) {
 		// rip off the leading / if it's there and we're not looking for a deep path
 		if (!isDeepPath(xpath) && xpath.length && xpath[0] == '/') xpath = xpath[1..$];
@@ -669,20 +664,23 @@ class XmlNode
 		return null;
 	}
 
-	// opIndex accessors
+	/// Index override for getting attributes.
 	string opIndex(string attr) {
 		return getAttribute(attr);
 	}
 
+	/// Index override for getting children.
 	XmlNode opIndex(int childnum) {
 		if (childnum < _children.length) return _children[childnum];
 		return null;
 	}
 
+	/// Index override for setting attributes.
 	XmlNode opIndexAssign(string value,string name) {
 		return setAttribute(name,value);
 	}
 
+	/// Index override for replacing children.
 	XmlNode opIndexAssign(XmlNode x,int childnum) {
 		if (childnum > _children.length) throw new Exception("Child element assignment is outside of array bounds");
 		_children[childnum] = x;
