@@ -224,8 +224,8 @@ class XmlNode
 	// this makes life easier for those looking to pull cdata from tags that only have that as the single subnode
 	string getCData() {
 		string tmp;
-		foreach(child;_children) {
-			tmp ~= child.toString(); 
+		foreach(child;_children) if (child.isCData) {
+			tmp ~= child.getCData(); 
 		}
 		return tmp;
 	}
