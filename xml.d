@@ -161,13 +161,13 @@ class XmlNode
 		}
 	}
 
-	// Remove the attribute with name.
+	/// Remove the attribute with name.
 	XmlNode removeAttribute(string name) {
 		_attributes.remove(name);
 		return this;
 	}
 
-	// Add an XmlNode child.
+	/// Add a child.
 	XmlNode addChild(XmlNode newNode) {
 		// let's bump things by increments of 10 to make them more efficient
 		if (_children.length+1%10==0) {
@@ -179,12 +179,12 @@ class XmlNode
 		return this;
 	}
 
-	// Return an array of all child XmlNodes.
+	/// This function returns an array of all child nodes.
 	XmlNode[] getChildren() {
 		return _children;
 	}
 
-	// remove the child with the same reference as what was given, returns the number of children removed
+	/// Remove the child with the same reference as what was given, returns the number of children removed
 	int removeChild(XmlNode remove) {
 		int len = _children.length;
 		for (int i = 0;i<_children.length;i++) if (_children[i] is remove) {
@@ -195,12 +195,12 @@ class XmlNode
 		return len - _children.length;
 	}
 
-	// Add a child Node of cdata (text).
+	/// Add a child Node of cdata (text).
 	deprecated XmlNode addCdata(string cdata) {
 		return addCData(cdata);
 	}
 
-	// make an alias so as not to break compatibility
+	/// Add a child Node of cdata (text).
 	XmlNode addCData(string cdata) {
 		addChild(new CData(cdata));
 		return this;
@@ -221,11 +221,20 @@ class XmlNode
 		return false;
 	}
 
-	// this makes life easier for those looking to pull cdata from tags that only have that as the single subnode
+	/// This function makes life easier for those looking to pull cdata from a tag, in the case of multiple nodes, it pulls all first level cdata nodes.
 	string getCData() {
 		string tmp;
 		foreach(child;_children) if (child.isCData) {
 			tmp ~= child.getCData(); 
+		}
+		return tmp;
+	}
+
+	/// This function gives you the inner xml as it would appear in the document.
+	string getInnerXML() {
+		string tmp;
+		foreach(child;_children) {
+			tmp ~= child.toString(); 
 		}
 		return tmp;
 	}
