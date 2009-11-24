@@ -313,6 +313,7 @@ class XmlNode
 		token = strip(xsrc[0..slice]);
 		xsrc = xsrc[slice..$];
 		debug(xml)writefln("I found cdata text: %s",token);
+		// DO NOT CHANGE THIS TO USE THE CONSTRUCTOR, BECAUSE THE CONSTRUCTOR IS FOR USER USE
 		auto cd = new CData;
 		cd._cdata = token;
 		parent.addChild(cd);
@@ -363,6 +364,7 @@ class XmlNode
 		token = xsrc[0..slice];
 		xsrc = xsrc[slice+3..$];
 		debug(xml)writefln("I found cdata text: %s",token);
+		// DO NOT CHANGE THIS TO USE THE CONSTRUCTOR, BECAUSE THE CONSTRUCTOR IS FOR USER USE
 		auto cd = new CData;
 		cd._cdata = token;
 		parent.addChild(cd);
