@@ -313,7 +313,9 @@ class XmlNode
 		token = strip(xsrc[0..slice]);
 		xsrc = xsrc[slice..$];
 		debug(xml)writefln("I found cdata text: %s",token);
-		parent.addCData(token);
+		auto cd = new CData;
+		cd._cdata = token;
+		parent.addChild(cd);
 	}
 
 	// parse out a close tag and make sure it's the one we want
@@ -361,7 +363,9 @@ class XmlNode
 		token = xsrc[0..slice];
 		xsrc = xsrc[slice+3..$];
 		debug(xml)writefln("I found cdata text: %s",token);
-		parent.addCData(token);
+		auto cd = new CData;
+		cd._cdata = token;
+		parent.addChild(cd);
 	}
 
 	// rip off a comment
