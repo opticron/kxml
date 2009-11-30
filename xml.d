@@ -213,20 +213,20 @@ class XmlNode
 	}
 
 	/// Check to see if this node is a CData node.
-	// XXX this should be done with casting tests so it doesn't have to be overriden
-	bool isCData() {
+	final bool isCData() {
+		if (cast(CData)this) return true;
 		return false;
 	}
 
 	/// Check to see if this node is a XmlPI node.
-	// XXX this should be done with casting tests so it doesn't have to be overriden
-	bool isXmlPI() {
+	final bool isXmlPI() {
+		if (cast(XmlPI)this) return true;
 		return false;
 	}
 
 	/// Check to see if this node is a XmlComment node.
-	// XXX this should be done with casting tests so it doesn't have to be overriden
-	bool isXmlComment() {
+	final bool isXmlComment() {
+		if (cast(XmlComment)this) return true;
 		return false;
 	}
 
@@ -282,7 +282,7 @@ class XmlNode
 			return null; // don't need it.  Leaves close themselves via the <blah /> syntax.
 	}
 
-	protected bool isLeaf() {
+	final protected bool isLeaf() {
 		return _children.length == 0;
 	}
 
@@ -731,11 +731,6 @@ class CData : XmlNode
 
 	this(){}
 
-	/// Override to ensure this node is recognized as a CData node.
-	override bool isCData() {
-		return true;
-	}
-
 	/// Get CData string associated with this object.
 	/// Returns: Parsed Character Data with decoded XML entities
 	override string getCData() {
@@ -759,10 +754,6 @@ class CData : XmlNode
 	}
 
 	protected override string asCloseTag() { return null; }
-
-	protected override bool isLeaf() {
-		return true;
-	}
 
 	/// This throws an exception because CData nodes do not have names.
 	override string getName() {
@@ -827,11 +818,6 @@ class XmlPI : XmlNode {
 		super(name);
 	}
 
-	/// Override to ensure this node is recognized as a XML processing instrution node.
-	override bool isXmlPI() {
-		return true;
-	}
-
 	/// This node can't have children, and so can't have CData.
 	/// Should this throw an exception?
 	override string getCData() {
@@ -860,11 +846,6 @@ class XmlPI : XmlNode {
 	// internal function to generate closing tags
 	protected override string asCloseTag() { return null; }
 
-	// this is always a leaf...
-	protected override bool isLeaf() {
-		return true;
-	}
-
 	/// You can't add a child to something that can't have children.  There is no adoption in XML world.
 	override XmlNode addChild(XmlNode newNode) {
 		throw new XmlError("Cannot add a child node to XmlPI.");
@@ -890,11 +871,6 @@ class XmlComment : XmlNode {
 	this(string incomment) {
 		comment = incomment;
 		super(null);
-	}
-
-	/// Override to ensure this node is recognized as a XML processing instrution node.
-	override bool isXmlComment() {
-		return true;
 	}
 
 	/// This node can't have children, and so can't have CData.
@@ -924,11 +900,6 @@ class XmlComment : XmlNode {
 
 	// internal function to generate closing tags
 	protected override string asCloseTag() { return null; }
-
-	// this is always a leaf...
-	protected override bool isLeaf() {
-		return true;
-	}
 
 	/// The members of Project Mayhem have no name... (this throws an exception)
 	override string getName() {
