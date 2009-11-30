@@ -29,6 +29,7 @@ version(Tango) {
 
 /**
  * Read an entire string into a tree of XmlNodes.
+ * This defaults to stripping all whitespace for a speed gain (less objects created), but can be forced to preserve whitespace using the second parameter.
  * Example:
  * --------------------------------
  * string xmlstring = "<message responseID=\"1234abcd\" text=\"weather 12345\" type=\"message\"><flags>triggered</flags><flags>targeted</flags></message>";
@@ -54,12 +55,12 @@ version(Tango) {
  * Returns: An XmlNode with no name that is the root of the document that was read.
  * Throws: XmlError on any parsing errors.
  */
-XmlNode readDocument(string src)
+XmlNode readDocument(string src,bool preserveWS=false)
 {
 	string pointcpy = src;
 	XmlNode root = new XmlNode(null);
 	try {
-		root.addChildren(src);
+		root.addChildren(src,preserveWS);
 	} catch (XmlError e) {
 		writefln("Caught exception from input string:\n%s",pointcpy);
 		throw e;
@@ -290,7 +291,7 @@ class XmlNode
 		auto tmp = asOpenTag();
 
 		if (_children.length) {
-			tmp ~= getCData();
+			tmp ~= getInnerXML();
 			tmp ~= asCloseTag();
 		}
 		return tmp;
@@ -315,10 +316,10 @@ class XmlNode
 	}
 
 	/// Add children from a string containing valid xml.
-	void addChildren(string xsrc) {
+	void addChildren(string xsrc,bool preserveWS) {
 		while (xsrc.length) {
 			// there may be multiple tag trees or cdata elements
-			parseNode(this,xsrc);
+			parseNode(this,xsrc,preserveWS);
 		}
 	}
 
@@ -334,11 +335,13 @@ class XmlNode
 	}
 
 	// snag some text and lob it into a cdata node
-	private void parseCData(XmlNode parent,inout string xsrc) {
+	private void parseCData(XmlNode parent,inout string xsrc,bool preserveWS) {
 		int slice;
 		string token;
 		slice = readUntil(xsrc,"<");
-		token = strip(xsrc[0..slice]);
+		token = xsrc[0..slice];
+		// don't break xml whitespace specs unless requested
+		if (!preserveWS) token = stripr(token);
 		xsrc = xsrc[slice..$];
 		debug(xml)writefln("I found cdata text: %s",token);
 		// DO NOT CHANGE THIS TO USE THE CONSTRUCTOR, BECAUSE THE CONSTRUCTOR IS FOR USER USE
@@ -406,7 +409,6 @@ class XmlNode
 		slice = readUntil(xsrc,"-->");
 		token = xsrc[0..slice];
 		xsrc = xsrc[slice+3..$];
-		token = strip(token);
 		parent.addChild(new XmlComment(token));
 	}
 
@@ -422,8 +424,8 @@ class XmlNode
 		// XXX we probably want to do something with these
 	}
 
-	// rip off a XML Instruction
-	private void parseOpenTag(XmlNode parent,inout string xsrc) {
+	// rip off a XML opening tag
+	private void parseOpenTag(XmlNode parent,inout string xsrc,bool preserveWS) {
 		// rip off name
 		string name = getWSToken(xsrc);
 		// rip off attributes while looking for ?>
@@ -446,11 +448,13 @@ class XmlNode
 		} 
 		// check for >
 		if (!xsrc.length || xsrc[0] != '>') throw new XmlError("Unable to find end of "~name~" tag");
-		xsrc = stripl(xsrc[1..$]);
+		xsrc = xsrc[1..$];
+		// don't rape whitespace unless requested
+		if (!preserveWS) xsrc = stripl(xsrc);
 		// now that we've added all the attributes to the node, pass the rest of the string and the current node to the next node
 		int ret;
 		while (xsrc.length) {
-			if ((ret = parseNode(newnode,xsrc)) == 1) {
+			if ((ret = parseNode(newnode,xsrc,preserveWS)) == 1) {
 				break;
 			}
 		}
@@ -461,17 +465,18 @@ class XmlNode
 	}
 
 	// returns everything after the first node TREE (a node can be text as well)
-	private int parseNode(XmlNode parent,inout string xsrc) {
+	private int parseNode(XmlNode parent,inout string xsrc,bool preserveWS) {
 		// if it was just whitespace and no more text or tags, make sure that's covered
 		int ret = 0;
-		xsrc = stripl(xsrc);
+		// this has been removed from normal code flow to be XML std compliant, preserve whitespace
+		if (!preserveWS) xsrc = stripl(xsrc); 
 		debug(xml)writefln("Parsing text: %s",xsrc);
 		if (!xsrc.length) {
 			return 0;
 		}
 		string token;
 		if (xsrc[0] != '<') {
-			parseCData(parent,xsrc);
+			parseCData(parent,xsrc,preserveWS);
 			return 0;
 		} 
 		xsrc = xsrc[1..$];
@@ -480,7 +485,7 @@ class XmlNode
 		switch(xsrc[0]) {
 		default:
 			// just a regular old tag
-			parseOpenTag(parent,xsrc);
+			parseOpenTag(parent,xsrc,preserveWS);
 			break;
 		case '/':
 			// closing tag!
