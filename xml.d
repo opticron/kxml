@@ -1,7 +1,8 @@
 /**
- * Copyright:  (c) 2009 William K. Moore, III (nyphbl8d (at) gmail (dot) com, opticron on freenode)
- * Authors:    William K. Moore, III
- * License:    <a href="lgpl.txt">LGPL</a>
+ * Copyright:	(c) 2009 William K. Moore, III (nyphbl8d (at) gmail (dot) com, opticron on freenode)
+ * Authors:	William K. Moore, III
+ * License:	<a href="lgpl.txt">LGPL</a>
+ * Standards:	Attempts to conform to XML 1.0 Specification
  *
  * KXML contains functions and classes for reading, parsing, and writing xml
  * documents.
@@ -30,10 +31,29 @@ version(Tango) {
  * Read an entire string into a tree of XmlNodes.
  * Example:
  * --------------------------------
- * XmlNode xml;
- * string xmlstring = "<node attr=\"self closing\"/>";
- * xml = readDocument(xmlstring);
- * --------------------------------*/
+ * string xmlstring = "<message responseID=\"1234abcd\" text=\"weather 12345\" type=\"message\"><flags>triggered</flags><flags>targeted</flags></message>";
+ * XmlNode xml = xmlstring.readDocument();
+ * xmlstring = xml.toString;
+ * // ensure that the string doesn't mutate after a second reading, it shouldn't
+ * debug(xml)writefln("kxml.xml unit test");
+ * assert(xmlstring.readDocument().toString == xmlstring);
+ * debug(xpath)writefln("kxml.xml XPath unit test");
+ * XmlNode[]searchlist = xml.parseXPath("message/flags");
+ * assert(searchlist.length == 2 && searchlist[0].getName == "flags");
+ * 
+ * debug(xpath)writefln("kxml.xml deep XPath unit test");
+ * searchlist = xml.parseXPath("//message//flags");
+ * assert(searchlist.length == 2 && searchlist[0].getName == "flags");
+ * 
+ * debug(xpath)writefln("kxml.xml attribute match XPath unit test");
+ * searchlist = xml.parseXPath("/message[@type=\"message\" and @responseID=\"1234abcd\"]/flags");
+ * assert(searchlist.length == 2 && searchlist[0].getName == "flags");
+ * searchlist = xml.parseXPath("message[@type=\"toaster\"]/flags");
+ * assert(searchlist.length == 0);
+ * --------------------------------
+ * Returns: An XmlNode with no name that is the root of the document that was read.
+ * Throws: XmlError on any parsing errors.
+ */
 XmlNode readDocument(string src)
 {
 	string pointcpy = src;
@@ -73,13 +93,6 @@ class XmlNode
 	protected XmlNode[]      _children;
 
 
-	protected string genAttrString() {
-		string ret;
-		foreach (keys,values;_attributes) {
-				ret ~= " " ~ keys ~ "=\"" ~ values ~ "\"";
-		}
-		return ret;
-	}
 
 	static this(){}
 
@@ -169,12 +182,14 @@ class XmlNode
 		return this;
 	}
 
-	/// This function returns an array of all child nodes.
+	/// Get all child nodes associated with this object.
+	/// Returns: An raw, uncopied array of all child nodes.
 	XmlNode[] getChildren() {
 		return _children;
 	}
 
-	/// Remove the child with the same reference as what was given, returns the number of children removed
+	/// Remove the child with the same reference as what was given.
+	/// Returns: The number of children removed.
 	int removeChild(XmlNode remove) {
 		int len = _children.length;
 		for (int i = 0;i<_children.length;i++) if (_children[i] is remove) {
@@ -185,7 +200,7 @@ class XmlNode
 		return len - _children.length;
 	}
 
-	/// Add a child Node of cdata (text).
+	/// Deprecated: Superceded by function addCData. Take note of the change in case of the letter D.
 	deprecated XmlNode addCdata(string cdata) {
 		return addCData(cdata);
 	}
@@ -197,19 +212,19 @@ class XmlNode
 	}
 
 	/// Check to see if this node is a CData node.
-	// this should be done with casting tests
+	// XXX this should be done with casting tests so it doesn't have to be overriden
 	bool isCData() {
 		return false;
 	}
 
 	/// Check to see if this node is a XmlPI node.
-	// this should be done with casting tests
+	// XXX this should be done with casting tests so it doesn't have to be overriden
 	bool isXmlPI() {
 		return false;
 	}
 
 	/// Check to see if this node is a XmlComment node.
-	// this should be done with casting tests
+	// XXX this should be done with casting tests so it doesn't have to be overriden
 	bool isXmlComment() {
 		return false;
 	}
@@ -232,6 +247,7 @@ class XmlNode
 		return tmp;
 	}
 
+	// internal function to generate opening tags
 	protected string asOpenTag() {
 		if (_name.length == 0) {
 			return null;
@@ -245,6 +261,16 @@ class XmlNode
 		return s;
 	}
 
+	// internal function used to generate the attribute list
+	protected string genAttrString() {
+		string ret;
+		foreach (keys,values;_attributes) {
+				ret ~= " " ~ keys ~ "=\"" ~ values ~ "\"";
+		}
+		return ret;
+	}
+
+	// internal function to generate closing tags
 	protected string asCloseTag() {
 		if (_name.length == 0) {
 			return null;
@@ -705,7 +731,8 @@ class CData : XmlNode
 		return true;
 	}
 
-	/// This function returns CData with decoded XML entities.
+	/// Get CData string associated with this object.
+	/// Returns: Parsed Character Data with decoded XML entities
 	override string getCData() {
 		return xmlDecode(_cdata);
 	}
@@ -777,7 +804,7 @@ class CData : XmlNode
 		throw new XmlError("Cannot add a child node to CData.");
 	}
 
-	/// This throws an exception because CData nodes do not have children.
+	/// Deprecated: Superceded by function addCData. Take note of the change in case of the letter D.
 	deprecated override XmlNode addCdata(string cdata) {
 		throw new XmlError("Cannot add a child node to CData.");
 	}
@@ -790,24 +817,33 @@ class CData : XmlNode
 
 /// A class specialization for XML instructions.
 class XmlPI : XmlNode {
+	/// Override the constructor that takes a name so that it's accessible.
 	this(string name) {
 		super(name);
 	}
 
+	/// Override to ensure this node is recognized as a XML processing instrution node.
 	override bool isXmlPI() {
 		return true;
 	}
 
+	/// This node can't have children, and so can't have CData.
+	/// Should this throw an exception?
 	override string getCData() {
 		return null;
 	}
+
+	/// Override toString for output to be used by parsers.
 	override string toString() {
 		return asOpenTag();
 	}
 
+	/// Pretty print to be used by parsers.
 	protected override string write(string indent=null) {
 		return indent~asOpenTag()~"\n";
 	}
+
+	// internal function to generate opening tags
 	protected override string asOpenTag() {
 		if (_name.length == 0) {
 			return null;
@@ -816,23 +852,28 @@ class XmlPI : XmlNode {
 		return s;
 	}
 
+	// internal function to generate closing tags
 	protected override string asCloseTag() { return null; }
 
+	// this is always a leaf...
 	protected override bool isLeaf() {
 		return true;
 	}
 
-	// Add an XmlNode child.
+	/// You can't add a child to something that can't have children.  There is no adoption in XML world.
 	override XmlNode addChild(XmlNode newNode) {
 		throw new XmlError("Cannot add a child node to XmlPI.");
 	}
 
-	// Add a child Node of cdata (text).
+	/// You can't add a child to something that can't have children.  There is no adoption in XML world.
+	/// Especially for red-headed stepchildren CData nodes.
+	/// Deprecated: Superceded by function addCData. Take note of the change in case of the letter D.
 	deprecated override XmlNode addCdata(string cdata) {
 		throw new XmlError("Cannot add a child node to XmlPI.");
 	}
 
-	// make an alias so as not to break compatibility
+	/// You can't add a child to something that can't have children.  There is no adoption in XML world.
+	/// Especially for red-headed stepchildren CData nodes.
 	override XmlNode addCData(string cdata) {
 		throw new XmlError("Cannot add a child node to XmlPI.");
 	}
@@ -846,20 +887,28 @@ class XmlComment : XmlNode {
 		super(null);
 	}
 
+	/// Override to ensure this node is recognized as a XML processing instrution node.
 	override bool isXmlComment() {
 		return true;
 	}
 
+	/// This node can't have children, and so can't have CData.
+	/// Should this throw an exception?
 	override string getCData() {
 		return null;
 	}
+
+	/// Override toString for output to be used by parsers.
 	override string toString() {
 		return asOpenTag();
 	}
 
+	/// Pretty print to be used by parsers.
 	protected override string write(string indent=null) {
 		return indent~asOpenTag()~"\n";
 	}
+
+	// internal function to generate opening tags
 	protected override string asOpenTag() {
 		if (_name.length == 0) {
 			return null;
@@ -868,69 +917,66 @@ class XmlComment : XmlNode {
 		return s;
 	}
 
+	// internal function to generate closing tags
 	protected override string asCloseTag() { return null; }
 
+	// this is always a leaf...
 	protected override bool isLeaf() {
 		return true;
 	}
 
+	/// The members of Project Mayhem have no name... (this throws an exception)
 	override string getName() {
 		throw new XmlError("Comment nodes do not have names to get.");
 	}
 
-	// Set the name of this XmlNode.
+	/// Ditto. (this throws an exception)
 	override void setName(string newName) {
 		throw new XmlError("Comment nodes do not have names to set.");
 	}
 
-	// Does this XmlNode have an attribute with name?
+	/// These events can not be attributed to space monkeys. (this throws an exception)
 	override bool hasAttribute(string name) {
 		throw new XmlError("Comment nodes do not have attributes.");
 	}
 
-	// Get the attribute with name, or return null if no attribute has that name.
+	/// Ditto. (this throws an exception)
 	override string getAttribute(string name) {
 		throw new XmlError("Comment nodes do not have attributes to get.");
 	}
 
-	// Return an array of all attributes (by reference, no copy is made).
-	// the user should know that these may have html escapes
+	/// Ditto. (this throws an exception)
 	override string[string] getAttributes() {
 		throw new XmlError("Comment nodes do not have attributes to get.");
 	}
 
-	/**
-	 * Set an attribute to a string value.  The attribute is created if it
-	 * doesn't exist.*/
+	/// Ditto. (this throws an exception)
 	override XmlNode setAttribute(string name, string value) {
 		throw new XmlError("Comment nodes do not have attributes to set.");
 	}
 
-	/**
-	 * Set an attribute to an integer value (stored internally as a string).
-	 * The attribute is created if it doesn't exist.*/
+	/// Ditto. (this throws an exception)
 	override XmlNode setAttribute(string name, long value) {
 		throw new XmlError("Comment nodes do not have attributes to set.");
 	}
 
-	/**
-	 * Set an attribute to a float value (stored internally as a string).
-	 * The attribute is created if it doesn't exist.*/
+	/// Ditto. (this throws an exception)
 	override XmlNode setAttribute(string name, float value) {
 		throw new XmlError("Comment nodes do not have attributes to set.");
 	}
 
-	// Add an XmlNode child.
+	/// Comments don't have children. (this throws an exception)
 	override XmlNode addChild(XmlNode newNode) {
 		throw new XmlError("Cannot add a child node to comment.");
 	}
 
-	// Add a child Node of cdata (text).
+	/// Ditto. (this throws an exception)
+	/// Deprecated: Superceded by function addCData. Take note of the change in case of the letter D.
 	deprecated override XmlNode addCdata(string cdata) {
 		throw new XmlError("Cannot add a child node to comment.");
 	}
 
-	// make an alias so as not to break compatibility
+	/// Ditto. (this throws an exception)
 	override XmlNode addCData(string cdata) {
 		throw new XmlError("Cannot add a child node to comment.");
 	}
@@ -975,7 +1021,7 @@ string xmlDecode(string src) {
         return tempStr;
 }
 
-dchar hex2dchar (string hex) {
+private dchar hex2dchar (string hex) {
 	dchar res;
 	foreach(digit;hex) {
 		res <<= 4;
@@ -984,7 +1030,7 @@ dchar hex2dchar (string hex) {
 	return res;
 }
 
-dchar toHVal(char digit) {
+private dchar toHVal(char digit) {
 	if (digit >= '0' && digit <= '9') {
 		return digit-'0';
 	}
