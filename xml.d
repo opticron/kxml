@@ -224,11 +224,6 @@ class XmlNode
 		return len - _children.length;
 	}
 
-	/// Deprecated: Superceded by function addCData. Take note of the change in case of the letter D.
-	deprecated XmlNode addCdata(string cdata) {
-		return addCData(cdata);
-	}
-
 	/// Add a child Node of cdata (text).
 	XmlNode addCData(string cdata) {
 		addChild(new CData(cdata));
@@ -823,11 +818,6 @@ class CData : XmlNode
 		throw new XmlError("Cannot add a child node to CData.");
 	}
 
-	/// Deprecated: Superceded by function addCData. Take note of the change in case of the letter D.
-	deprecated override XmlNode addCdata(string cdata) {
-		throw new XmlError("Cannot add a child node to CData.");
-	}
-
 	/// This throws an exception because CData nodes do not have children.
 	override XmlNode addCData(string cdata) {
 		throw new XmlError("Cannot add a child node to CData.");
@@ -871,13 +861,6 @@ class XmlPI : XmlNode {
 
 	/// You can't add a child to something that can't have children.  There is no adoption in XML world.
 	override XmlNode addChild(XmlNode newNode) {
-		throw new XmlError("Cannot add a child node to XmlPI.");
-	}
-
-	/// You can't add a child to something that can't have children.  There is no adoption in XML world.
-	/// Especially for red-headed stepchildren CData nodes.
-	/// Deprecated: Superceded by function addCData. Take note of the change in case of the letter D.
-	deprecated override XmlNode addCdata(string cdata) {
 		throw new XmlError("Cannot add a child node to XmlPI.");
 	}
 
@@ -966,12 +949,6 @@ class XmlComment : XmlNode {
 
 	/// Comments don't have children. (this throws an exception)
 	override XmlNode addChild(XmlNode newNode) {
-		throw new XmlError("Cannot add a child node to comment.");
-	}
-
-	/// Ditto. (this throws an exception)
-	/// Deprecated: Superceded by function addCData. Take note of the change in case of the letter D.
-	deprecated override XmlNode addCdata(string cdata) {
 		throw new XmlError("Cannot add a child node to comment.");
 	}
 
