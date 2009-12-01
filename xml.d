@@ -1007,7 +1007,7 @@ string xmlDecode(string src) {
 	// take care of hex character entities
 	tempStr = regrep(tempStr,"&#[xX][0-9a-fA-F]{1,8};",(string m) {
 		auto cnum = m[3..$-1];
-		dchar dnum = hex2dchar(cnum[1..$]);
+		dchar dnum = hex2dchar(cnum);
 		return quickUTF8(dnum);
 	});
         return tempStr;
@@ -1039,7 +1039,7 @@ string quickUTF8(dchar dachar) {
 	return cast(string)ret;
 }
 private dchar hex2dchar (string hex) {
-	dchar res;
+	dchar res = 0;
 	foreach(digit;hex) {
 		res <<= 4;
 		res |= toHVal(digit);
@@ -1052,10 +1052,10 @@ private dchar toHVal(char digit) {
 		return digit-'0';
 	}
 	if (digit >= 'a' && digit <= 'f') {
-		return digit-'a';
+		return digit-'a'+10;
 	}
 	if (digit >= 'A' && digit <= 'F') {
-		return digit-'A';
+		return digit-'A'+10;
 	}
 	return 0;
 }
