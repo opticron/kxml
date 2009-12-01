@@ -1013,31 +1013,16 @@ string xmlDecode(string src) {
         return tempStr;
 }
 
-string quickUTF8(dchar dachar) {
-	char[] ret;
-	if (dachar <= 0x7F) {
-		ret.length = 1;
-		ret[0] = cast(char) dachar;
-	} else if (dachar <= 0x7FF) {
-		ret.length = 2;
-		ret[0] = cast(char)(0xC0 | (dachar >> 6));
-		ret[1] = cast(char)(0x80 | (dachar & 0x3F));
-	} else if (dachar <= 0xFFFF) {
-		ret.length = 3;
-		ret[0] = cast(char)(0xE0 | (dachar >> 12));
-		ret[1] = cast(char)(0x80 | ((dachar >> 6) & 0x3F));
-		ret[2] = cast(char)(0x80 | (dachar & 0x3F));
-	} else if (dachar <= 0x10FFFF) {
-		ret.length = 4;
-		ret[0] = cast(char)(0xF0 | (dachar >> 18));
-		ret[1] = cast(char)(0x80 | ((dachar >> 12) & 0x3F));
-		ret[2] = cast(char)(0x80 | ((dachar >> 6) & 0x3F));
-		ret[3] = cast(char)(0x80 | (dachar & 0x3F));
-	} else {
-	    assert(0);
+// a quick dchar to utf8 conversion
+private string quickUTF8(dchar dachar) {
+	char[]ret;
+	foreach(char r;[dachar]) {
+		ret ~= r;
 	}
 	return cast(string)ret;
 }
+
+// convert a hex string to a raw dchar
 private dchar hex2dchar (string hex) {
 	dchar res = 0;
 	foreach(digit;hex) {
@@ -1047,6 +1032,7 @@ private dchar hex2dchar (string hex) {
 	return res;
 }
 
+// convert a single hex digit to its raw value
 private dchar toHVal(char digit) {
 	if (digit >= '0' && digit <= '9') {
 		return digit-'0';
