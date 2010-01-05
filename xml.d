@@ -50,7 +50,16 @@ version(Tango) {
 } else {
 	version(D_Version2) {
 		import std.conv:to;
-		import std.string:strip,stripr,stripl,split,replace,find=indexOf,cmp,icmp,atoi;
+		import std.string:strip,stripr,stripl,split,replace,find=indexOf,cmp,icmp;
+		real atoi(string data) {
+			return to!(int)(data);
+		}
+		string tostring(long data) {
+			return to!(string)(data);
+		}
+		string tostring(float data) {
+			return to!(string)(data);
+		}
 	} else {
 		import std.string:tostring=toString,strip,stripr,stripl,split,replace,find,cmp,icmp,atoi;
 	}
@@ -187,21 +196,13 @@ class XmlNode
 	/// Set an attribute to an integer value (stored internally as a string).
 	/// The attribute is created if it doesn't exist.
 	XmlNode setAttribute(string name, long value) {
-		version(D_Version2) {
-			return setAttribute(name, to!(string)(value));
-		} else {
-			return setAttribute(name, tostring(value));
-		}
+		return setAttribute(name, tostring(value));
 	}
 
 	/// Set an attribute to a float value (stored internally as a string).
 	/// The attribute is created if it doesn't exist.
 	XmlNode setAttribute(string name, float value) {
-		version(D_Version2) {
-			return setAttribute(name, to!(string)(value));
-		} else {
-			return setAttribute(name, tostring(value));
-		}
+		return setAttribute(name, tostring(value));
 	}
 
 	/// Remove the attribute with name.
@@ -369,7 +370,7 @@ class XmlNode
 	}
 
 	// snag some text and lob it into a cdata node
-	private void parseCData(XmlNode parent,inout string xsrc,bool preserveWS) {
+	private void parseCData(XmlNode parent,ref string xsrc,bool preserveWS) {
 		int slice;
 		string token;
 		slice = readUntil(xsrc,"<");
@@ -385,7 +386,7 @@ class XmlNode
 	}
 
 	// parse out a close tag and make sure it's the one we want
-	private void parseCloseTag(XmlNode parent,inout string xsrc) {
+	private void parseCloseTag(XmlNode parent,ref string xsrc) {
 		int slice;
 		string token;
 		slice = readUntil(xsrc,">");
@@ -396,7 +397,7 @@ class XmlNode
 	}
 
 	// rip off a xml processing instruction, like the ones that come at the beginning of xml documents
-	private void parseXMLPI(XmlNode parent,inout string xsrc) {
+	private void parseXMLPI(XmlNode parent,ref string xsrc) {
 		// rip off <?
 		xsrc = stripl(xsrc[1..$]);
 		// rip off name
@@ -421,7 +422,7 @@ class XmlNode
 	}
 
 	// rip off an unparsed character data node
-	private void parseUCData(XmlNode parent,inout string xsrc) {
+	private void parseUCData(XmlNode parent,ref string xsrc) {
 		int slice;
 		string token;
 		xsrc = xsrc[7..$];
@@ -436,7 +437,7 @@ class XmlNode
 	}
 
 	// rip off a comment
-	private void parseComment(XmlNode parent,inout string xsrc) {
+	private void parseComment(XmlNode parent,ref string xsrc) {
 		int slice;
 		string token;
 		xsrc = xsrc[2..$];
@@ -447,7 +448,7 @@ class XmlNode
 	}
 
 	// rip off a XML Instruction
-	private void parseXMLInst(XmlNode parent,inout string xsrc) {
+	private void parseXMLInst(XmlNode parent,ref string xsrc) {
 		int slice;
 		string token;
 		slice = readUntil(xsrc,">");
@@ -459,7 +460,7 @@ class XmlNode
 	}
 
 	// rip off a XML opening tag
-	private void parseOpenTag(XmlNode parent,inout string xsrc,bool preserveWS) {
+	private void parseOpenTag(XmlNode parent,ref string xsrc,bool preserveWS) {
 		// rip off name
 		string name = getWSToken(xsrc);
 		// rip off attributes while looking for ?>
@@ -499,7 +500,7 @@ class XmlNode
 	}
 
 	// returns everything after the first node TREE (a node can be text as well)
-	private int parseNode(XmlNode parent,inout string xsrc,bool preserveWS) {
+	private int parseNode(XmlNode parent,ref string xsrc,bool preserveWS) {
 		// if it was just whitespace and no more text or tags, make sure that's covered
 		int ret = 0;
 		// this has been removed from normal code flow to be XML std compliant, preserve whitespace
@@ -561,7 +562,7 @@ class XmlNode
 	}
 
 	// basically to get the name off of open tags
-	private string getWSToken(inout string input) {
+	private string getWSToken(ref string input) {
 		input = stripl(input);
 		int i;
 		for(i=0;i<input.length && !isspace(input[i]) && input[i] != '>';i++){}
@@ -571,15 +572,15 @@ class XmlNode
 	}
 
 	// this code is now officially prettified
-	private void parseAttribute (XmlNode xml,inout string attrstr,string term = null) {
-		string ripName(inout string input) {
+	private void parseAttribute (XmlNode xml,ref string attrstr,string term = null) {
+		string ripName(ref string input) {
 			int i;
 			for(i=0;i < input.length && !isspace(input[i]) && input[i] != '=';i++){}
 			auto ret = input[0..i];
 			input = input[i..$];
 			return ret;
 		}
-		string ripValue(inout string input) {
+		string ripValue(ref string input) {
 		        int x;
 			char quot = input[0];
 			// rip off the starting quote
@@ -997,11 +998,7 @@ string xmlDecode(string src) {
 	// take care of decimal character entities
 	tempStr = regrep(tempStr,"&#\\d{1,8};",(string m) {
 		auto cnum = m[2..$-1];
-		version(D_Version2) {
-			dchar dnum = cast(dchar)to!(int)(cnum);
-		} else {
-			dchar dnum = cast(dchar)atoi(cnum);
-		}
+		dchar dnum = cast(dchar)atoi(cnum);
 		return quickUTF8(dnum);
 	});
 	// take care of hex character entities
