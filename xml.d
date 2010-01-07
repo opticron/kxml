@@ -393,7 +393,7 @@ class XmlNode
 		token = strip(xsrc[1..slice]);
 		xsrc = xsrc[slice+1..$];
 		debug(xml)writef("I found a closing tag (yikes):",token,"\n");
-		if (token.icmp(parent.getName()) != 0) throw new XmlError("Wrong close tag: "~token);
+		if (token.icmp(parent.getName()) != 0) throw new XmlError("Wrong close tag: "~token~" for parent tag "~parent.getName);
 	}
 
 	// rip off a xml processing instruction, like the ones that come at the beginning of xml documents
@@ -464,7 +464,7 @@ class XmlNode
 		// rip off name
 		string name = getWSToken(xsrc);
 		// rip off attributes while looking for ?>
-		debug(xml)writef("Got a ",name," XML processing instruction\n");
+		debug(xml)writef("Got a ",name," open tag\n");
 		XmlNode newnode = new XmlNode(name);
 		xsrc = stripl(xsrc);
 		while(xsrc.length && xsrc[0] != '/' && xsrc[0] != '>') {
@@ -565,7 +565,7 @@ class XmlNode
 	private string getWSToken(ref string input) {
 		input = stripl(input);
 		int i;
-		for(i=0;i<input.length && !isspace(input[i]) && input[i] != '>';i++){}
+		for(i=0;i<input.length && !isspace(input[i]) && input[i] != '>' && input[i] != '/';i++){}
 		auto ret = input[0..i];
 		input = input[i..$];
 		return ret;
