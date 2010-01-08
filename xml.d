@@ -137,6 +137,7 @@ class XmlError : Exception {
  * --------------------------------*/
 class XmlNode
 {
+	protected XmlDocument _docroot;
 	protected string _name;
 	protected string[string] _attributes;
 	protected XmlNode[]      _children;
@@ -243,7 +244,9 @@ class XmlNode
 
 	/// Add a child Node of cdata (text).
 	XmlNode addCData(string cdata) {
-		addChild(new CData(cdata));
+		auto cd = (_docroot?_docroot.allocCData:new CData);
+		cd.setCData(cdata);
+		addChild(cd);
 		return this;
 	}
 
@@ -272,6 +275,21 @@ class XmlNode
 			tmp ~= child.getCData(); 
 		}
 		return tmp;
+	}
+
+	/// This function resets the node to a default state
+	void reset() {
+		foreach(child;_children) {
+			child.reset;
+		}
+		_children.length = 0;
+		_attributes = null;
+		_name = null;
+		// put back in the pool of available XmlNode nodes if possible
+		if (_docroot) {
+			_docroot.xmlNodes.length = _docroot.xmlNodes.length + 1;
+			_docroot.xmlNodes[$-1] = this;
+		}
 	}
 
 	/// This function gives you the inner xml as it would appear in the document.
@@ -380,7 +398,7 @@ class XmlNode
 		xsrc = xsrc[slice..$];
 		debug(xml)writef("I found cdata text: ",token,"\n");
 		// DO NOT CHANGE THIS TO USE THE CONSTRUCTOR, BECAUSE THE CONSTRUCTOR IS FOR USER USE
-		auto cd = new CData;
+		auto cd = (_docroot?_docroot.allocCData:new CData);
 		cd._cdata = token;
 		parent.addChild(cd);
 	}
@@ -402,15 +420,19 @@ class XmlNode
 		xsrc = stripl(xsrc[1..$]);
 		// rip off name
 		string name = getWSToken(xsrc);
+		XmlPI newnode;
 		if (name[$-1] == '?') {
 			// and we're at the end of the element
 			name = name[0..$-1];
-			parent.addChild(new XmlPI(name));
+			newnode = (_docroot?_docroot.allocXmlPI:new XmlPI);
+			newnode.setName(name);
+			parent.addChild(newnode);
 			return;
 		}
 		// rip off attributes while looking for ?>
 		debug(xml)writef("Got a ",name," XML processing instruction\n");
-		XmlPI newnode = new XmlPI(name);
+		newnode = (_docroot?_docroot.allocXmlPI:new XmlPI);
+		newnode.setName(name);
 		xsrc = stripl(xsrc);
 		while(xsrc.length >= 2 && xsrc[0..2] != "?>") {
 			parseAttribute(newnode,xsrc);
@@ -431,7 +453,7 @@ class XmlNode
 		xsrc = xsrc[slice+3..$];
 		debug(xml)writef("I found cdata text: ",token,"\n");
 		// DO NOT CHANGE THIS TO USE THE CONSTRUCTOR, BECAUSE THE CONSTRUCTOR IS FOR USER USE
-		auto cd = new CData;
+		auto cd = (_docroot?_docroot.allocCData:new CData);
 		cd._cdata = token;
 		parent.addChild(cd);
 	}
@@ -444,7 +466,9 @@ class XmlNode
 		slice = readUntil(xsrc,"-->");
 		token = xsrc[0..slice];
 		xsrc = xsrc[slice+3..$];
-		parent.addChild(new XmlComment(token));
+		auto x = (_docroot?_docroot.allocXmlComment:new XmlComment);
+		x._comment = token;
+		parent.addChild(x);
 	}
 
 	// rip off a XML Instruction
@@ -465,7 +489,8 @@ class XmlNode
 		string name = getWSToken(xsrc);
 		// rip off attributes while looking for ?>
 		debug(xml)writef("Got a ",name," open tag\n");
-		XmlNode newnode = new XmlNode(name);
+		auto newnode = (_docroot?_docroot.allocXmlNode:new XmlNode);
+		newnode.setName(name);
 		xsrc = stripl(xsrc);
 		while(xsrc.length && xsrc[0] != '/' && xsrc[0] != '>') {
 			parseAttribute(newnode,xsrc);
@@ -778,6 +803,16 @@ class CData : XmlNode
 		return this;
 	}
 
+	/// This function resets the node to a default state
+	override void reset() {
+		// put back in the pool of available CData nodes if possible
+		if (_docroot) {
+			_docroot.cdataNodes.length = _docroot.cdataNodes.length + 1;
+			_docroot.cdataNodes[$-1] = this;
+		}
+		_cdata = null;
+	}
+
 	/// This outputs escaped XML entities for use on the network or in a document.
 	protected override string toString() {
 		return _cdata;
@@ -843,6 +878,8 @@ class CData : XmlNode
 
 /// A class specialization for XML instructions.
 class XmlPI : XmlNode {
+	this(){}
+
 	/// Override the constructor that takes a name so that it's accessible.
 	this(string name) {
 		super(name);
@@ -857,6 +894,17 @@ class XmlPI : XmlNode {
 	/// Override toString for output to be used by parsers.
 	override string toString() {
 		return asOpenTag();
+	}
+
+	/// This function resets the node to a default state
+	override void reset() {
+		// put back in the pool of available CData nodes if possible
+		_name = null;
+		_attributes = null;
+		if (_docroot) {
+			_docroot.xmlPINodes.length = _docroot.xmlPINodes.length + 1;
+			_docroot.xmlPINodes[$-1] = this;
+		}
 	}
 
 	/// Pretty print to be used by parsers.
@@ -890,9 +938,10 @@ class XmlPI : XmlNode {
 
 /// A class specialization for XML comments.
 class XmlComment : XmlNode {
-	string comment;
-	this(string incomment) {
-		comment = incomment;
+	string _comment;
+	this(){}
+	this(string comment) {
+		_comment = comment;
 		super(null);
 	}
 
@@ -900,6 +949,16 @@ class XmlComment : XmlNode {
 	/// Should this throw an exception?
 	override string getCData() {
 		return null;
+	}
+
+	/// This function resets the node to a default state
+	override void reset() {
+		// put back in the pool of available XmlComment nodes if possible
+		_comment = null;
+		if (_docroot) {
+			_docroot.xmlCommentNodes.length = _docroot.xmlCommentNodes.length + 1;
+			_docroot.xmlCommentNodes[$-1] = this;
+		}
 	}
 
 	/// Override toString for output to be used by parsers.
@@ -917,7 +976,7 @@ class XmlComment : XmlNode {
 		if (_name.length == 0) {
 			return null;
 		}
-		auto s = "<!--" ~ comment  ~ "-->";
+		auto s = "<!--" ~ _comment  ~ "-->";
 		return s;
 	}
 
@@ -972,6 +1031,133 @@ class XmlComment : XmlNode {
 	/// Ditto. (this throws an exception)
 	override XmlNode addCData(string cdata) {
 		throw new XmlError("Cannot add a child node to comment.");
+	}
+}
+
+/** This is the encapsulating class for xml documents that allows reuse of nodes
+  * so as to not allocate ALL THE TIME if you find it convenient to reuse the structure
+  * Example:
+  *--------------------------
+  * string xmlstring = "<message responseID=\"1234abcd\" text=\"weather 12345\" type=\"message\"><flags>triggered</flags><flags>targeted</flags></message>";
+  * // here we have the creation of an XmlDocument using the static opCall
+  * auto newdoc = XmlDocument(xmlstring);
+  * // reset rips apart the node tree to be reused
+  * newdoc.reset;
+  * // so reuse the XmlDocument that already has allocated nodes
+  * newdoc.parse(xmlstring);
+  * // here we have the creation of a secondary with a constructor
+  * newdoc = new XmlDocument();
+  * newdoc.parse(xmlstring);
+  * // and again with the parse constructor
+  * newdoc = new XmlDocument(xmlstring);
+  * // XmlDocuments act like XmlNodes without attributes or names, so you can add children
+  * newdoc.addCData("A long long time ago, in a galaxy far far away...");
+  *--------------------------
+  */
+public int prealloc = 50;
+class XmlDocument:XmlNode {
+	// this should inherit the reset and toString that we want
+	protected XmlNode[]xmlNodes;
+	protected XmlComment[]xmlCommentNodes;
+	protected CData[]cdataNodes;
+	protected XmlPI[]xmlPINodes;
+	this() {
+		_docroot = this;
+		// allocate some XmlNodes to kick us off
+		xmlNodes.length = prealloc;
+		XmlNode tmp;
+		foreach(ref node;xmlNodes) {
+			tmp = new XmlNode();
+			tmp._docroot = this;
+			node = tmp;
+		}
+		super();
+	}
+
+
+	/// This static opCall should be used when creating new XmlDocuments for use
+	static XmlDocument opCall(string constring,bool preserveWS = false) {
+		auto root = new XmlDocument;
+		root.parse(constring,preserveWS);
+		return root;
+	}
+
+	/// This function resets the node to a default state
+	override void reset() {
+		foreach(child;_children) {
+			child.reset;
+		}
+		_children.length = 0;
+	}
+
+	void parse(string constring,bool preserveWS = false) {
+		string pointcpy = constring;
+		try {
+			addChildren(constring,preserveWS);
+		} catch (XmlError e) {
+			writef("Caught exception from input string:\n",pointcpy,"\n");
+			throw e;
+		}
+	}
+
+	/// Allow usage of the free list and allocation for XmlNodes if necessary.
+	XmlNode allocXmlNode() {
+		XmlNode tmp;
+		// use already allocated instances if available
+		if (xmlNodes.length) {
+			tmp = xmlNodes[$-1];
+			xmlNodes.length = xmlNodes.length - 1;
+		} else {
+			// otherwise, allocate a new one and set it up properly
+			tmp = new XmlNode();
+			tmp._docroot = this;
+		}
+		return tmp;
+	}
+
+	/// Allow usage of the free list and allocation for CData nodes if necessary.
+	CData allocCData() {
+		CData tmp;
+		// use already allocated instances if available
+		if (cdataNodes.length) {
+			tmp = cdataNodes[$-1];
+			cdataNodes.length = cdataNodes.length - 1;
+		} else {
+			// otherwise, allocate a new one and set it up properly
+			tmp = new CData();
+			tmp._docroot = this;
+		}
+		return tmp;
+	}
+
+	/// Allow usage of the free list and allocation for XmlComments if necessary.
+	XmlComment allocXmlComment() {
+		XmlComment tmp;
+		// use already allocated instances if available
+		if (xmlCommentNodes.length) {
+			tmp = xmlCommentNodes[$-1];
+			xmlCommentNodes.length = xmlCommentNodes.length - 1;
+		} else {
+			// otherwise, allocate a new one and set it up properly
+			tmp = new XmlComment();
+			tmp._docroot = this;
+		}
+		return tmp;
+	}
+
+	/// Allow usage of the free list and allocation for XmlPIs if necessary.
+	XmlPI allocXmlPI() {
+		XmlPI tmp;
+		// use already allocated instances if available
+		if (xmlPINodes.length) {
+			tmp = xmlPINodes[$-1];
+			xmlPINodes.length = xmlPINodes.length - 1;
+		} else {
+			// otherwise, allocate a new one and set it up properly
+			tmp = new XmlPI();
+			tmp._docroot = this;
+		}
+		return tmp;
 	}
 }
 
