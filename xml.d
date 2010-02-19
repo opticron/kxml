@@ -302,7 +302,7 @@ class XmlNode
 	}
 
 	// internal function to generate opening tags
-	protected string asOpenTag() {
+	string asOpenTag() {
 		if (_name.length == 0) {
 			return null;
 		}
@@ -325,7 +325,7 @@ class XmlNode
 	}
 
 	// internal function to generate closing tags
-	protected string asCloseTag() {
+	string asCloseTag() {
 		if (_name.length == 0) {
 			return null;
 		}
@@ -823,7 +823,7 @@ class CData : XmlNode
 		return indent~toString()~"\n";
 	}
 
-	protected override string asCloseTag() { return null; }
+	override string asCloseTag() { return null; }
 
 	/// This throws an exception because CData nodes do not have names.
 	override string getName() {
@@ -913,7 +913,7 @@ class XmlPI : XmlNode {
 	}
 
 	// internal function to generate opening tags
-	protected override string asOpenTag() {
+	override string asOpenTag() {
 		if (_name.length == 0) {
 			return null;
 		}
@@ -922,7 +922,7 @@ class XmlPI : XmlNode {
 	}
 
 	// internal function to generate closing tags
-	protected override string asCloseTag() { return null; }
+	override string asCloseTag() { return null; }
 
 	/// You can't add a child to something that can't have children.  There is no adoption in XML world.
 	override XmlNode addChild(XmlNode newNode) {
@@ -981,7 +981,7 @@ class XmlComment : XmlNode {
 	}
 
 	// internal function to generate closing tags
-	protected override string asCloseTag() { return null; }
+	override string asCloseTag() { return null; }
 
 	/// The members of Project Mayhem have no name... (this throws an exception)
 	override string getName() {
