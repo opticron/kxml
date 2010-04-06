@@ -378,7 +378,6 @@ class XmlNode
 	/// This function dumps the xml structure in to pretty, tabbed format.
 	string toPrettyString(string indent=null) {
 		string tmp;
-		if (isCData) return indent~toString~"\n";
 		if (getName.length) tmp = indent~asOpenTag()~"\n";
 
 		if (_children.length)
@@ -844,8 +843,13 @@ class CData : XmlNode
 		return _cdata;
 	}
 
+	/// Deprecated pretty writer
+	deprecated protected override string write(string indent=null) {
+		return toPrettyString(indent);
+	}
+
 	/// This outputs escaped XML entities for use on the network or in a document in pretty, tabbed format.
-	protected override string write(string indent) {
+	protected override string toPrettyString(string indent=null) {
 		return indent~toString()~"\n";
 	}
 
@@ -933,8 +937,13 @@ class XmlPI : XmlNode {
 		}
 	}
 
+	/// Deprecated pretty print to be used by parsers.
+	deprecated protected override string write(string indent=null) {
+		return toPrettyString(indent);
+	}
+
 	/// Pretty print to be used by parsers.
-	protected override string write(string indent=null) {
+	protected override string toPrettyString(string indent=null) {
 		return indent~asOpenTag()~"\n";
 	}
 
@@ -992,8 +1001,13 @@ class XmlComment : XmlNode {
 		return asOpenTag();
 	}
 
+	/// Deprecated pretty print to be used by parsers.
+	deprecated protected override string write(string indent=null) {
+		return toPrettyString(indent);
+	}
+
 	/// Pretty print to be used by parsers.
-	protected override string write(string indent=null) {
+	protected override string toPrettyString(string indent=null) {
 		return indent~asOpenTag()~"\n";
 	}
 
