@@ -50,6 +50,7 @@ version(Tango) {
 	version(D_Version2) {
 		import std.conv:to;
 		import std.string:strip,stripr,stripl,split,replace,find=indexOf,cmp,icmp;
+		import core.stdc.stdio:printf;
 		real atoi(string data) {
 			return to!(int)(data);
 		}
@@ -71,7 +72,7 @@ version(Tango) {
 		return sub(input,pattern,&tmpdel,"g");
 	}
 }
-void writef(string str) {
+private void logline(string str) {
 	printf("%*s",str);
 }
 
@@ -84,17 +85,17 @@ void writef(string str) {
  * XmlNode xml = xmlstring.readDocument();
  * xmlstring = xml.toString;
  * // ensure that the string doesn't mutate after a second reading, it shouldn't
- * debug(xml)writef("kxml.xml unit test\n");
+ * debug(xml)logline("kxml.xml unit test\n");
  * assert(xmlstring.readDocument().toString == xmlstring);
- * debug(xpath)writef("kxml.xml XPath unit test\n");
+ * debug(xpath)logline("kxml.xml XPath unit test\n");
  * XmlNode[]searchlist = xml.parseXPath("message/flags");
  * assert(searchlist.length == 2 && searchlist[0].getName == "flags");
  * 
- * debug(xpath)writef("kxml.xml deep XPath unit test\n");
+ * debug(xpath)logline("kxml.xml deep XPath unit test\n");
  * searchlist = xml.parseXPath("//message//flags");
  * assert(searchlist.length == 2 && searchlist[0].getName == "flags");
  * 
- * debug(xpath)writef("kxml.xml attribute match XPath unit test\n");
+ * debug(xpath)logline("kxml.xml attribute match XPath unit test\n");
  * searchlist = xml.parseXPath("/message[@type=\"message\" and @responseID=\"1234abcd\"]/flags");
  * assert(searchlist.length == 2 && searchlist[0].getName == "flags");
  * searchlist = xml.parseXPath("message[@type=\"toaster\"]/flags");
@@ -110,7 +111,7 @@ XmlNode readDocument(string src,bool preserveWS=false)
 	try {
 		root.addChildren(src,preserveWS);
 	} catch (XmlError e) {
-		writef("Caught exception from input string:\n"~pointcpy~"\n");
+		logline("Caught exception from input string:\n"~pointcpy~"\n");
 		throw e;
 	}
 	return root;
@@ -396,7 +397,7 @@ class XmlNode
 		// don't break xml whitespace specs unless requested
 		if (!preserveWS) token = stripr(token);
 		xsrc = xsrc[slice..$];
-		debug(xml)writef("I found cdata text: "~token~"\n");
+		debug(xml)logline("I found cdata text: "~token~"\n");
 		// DO NOT CHANGE THIS TO USE THE CONSTRUCTOR, BECAUSE THE CONSTRUCTOR IS FOR USER USE
 		auto cd = (_docroot?_docroot.allocCData:new CData);
 		cd._cdata = token;
@@ -410,7 +411,7 @@ class XmlNode
 		slice = readUntil(xsrc,">");
 		token = strip(xsrc[1..slice]);
 		xsrc = xsrc[slice+1..$];
-		debug(xml)writef("I found a closing tag (yikes):"~token~"\n");
+		debug(xml)logline("I found a closing tag (yikes):"~token~"\n");
 		if (token.icmp(parent.getName()) != 0) throw new XmlError("Wrong close tag: "~token~" for parent tag "~parent.getName);
 	}
 
@@ -430,7 +431,7 @@ class XmlNode
 			return;
 		}
 		// rip off attributes while looking for ?>
-		debug(xml)writef("Got a "~name~" XML processing instruction\n");
+		debug(xml)logline("Got a "~name~" XML processing instruction\n");
 		newnode = (_docroot?_docroot.allocXmlPI:new XmlPI);
 		newnode.setName(name);
 		xsrc = stripl(xsrc);
@@ -451,7 +452,7 @@ class XmlNode
 		slice = readUntil(xsrc,"]]>");
 		token = xsrc[0..slice];
 		xsrc = xsrc[slice+3..$];
-		debug(xml)writef("I found cdata text: "~token~"\n");
+		debug(xml)logline("I found cdata text: "~token~"\n");
 		// DO NOT CHANGE THIS TO USE THE CONSTRUCTOR, BECAUSE THE CONSTRUCTOR IS FOR USER USE
 		auto cd = (_docroot?_docroot.allocCData:new CData);
 		cd._cdata = token;
@@ -488,7 +489,7 @@ class XmlNode
 		// rip off name
 		string name = getWSToken(xsrc);
 		// rip off attributes while looking for ?>
-		debug(xml)writef("Got a "~name~" open tag\n");
+		debug(xml)logline("Got a "~name~" open tag\n");
 		auto newnode = (_docroot?_docroot.allocXmlNode:new XmlNode);
 		newnode.setName(name);
 		xsrc = stripl(xsrc);
@@ -503,7 +504,7 @@ class XmlNode
 			// check for >
 			if (!xsrc.length || xsrc[0] != '>') throw new XmlError("Unable to find end of "~name~" tag");
 			xsrc = stripl(xsrc[1..$]);
-			debug(xml)writef("self-closing tag!\n");
+			debug(xml)logline("self-closing tag!\n");
 			return;
 		} 
 		// check for >
@@ -530,7 +531,7 @@ class XmlNode
 		int ret = 0;
 		// this has been removed from normal code flow to be XML std compliant, preserve whitespace
 		if (!preserveWS) xsrc = stripl(xsrc); 
-		debug(xml)writef("Parsing text: "~xsrc~"\n");
+		debug(xml)logline("Parsing text: "~xsrc~"\n");
 		if (!xsrc.length) {
 			return 0;
 		}
@@ -637,7 +638,7 @@ class XmlNode
 		} else {
 			throw new XmlError("Unexpected end of input for attribute "~name~" in node "~xml.getName);
 		}
-		debug(xml)writef("Got attr "~name~" and value \""~value~"\"\n");
+		debug(xml)logline("Got attr "~name~" and value \""~value~"\"\n");
 		xml._attributes[name] = value;
 		attrstr = stripl(attrstr);
 	}
@@ -647,7 +648,7 @@ class XmlNode
 	XmlNode[]parseXPath(string xpath,bool caseSensitive = false) {
 		// rip off the leading / if it's there and we're not looking for a deep path
 		if (!isDeepPath(xpath) && xpath.length && xpath[0] == '/') xpath = xpath[1..$];
-		debug(xpath)writef("Got xpath "~xpath~" in node "~getName~"\n");
+		debug(xpath)logline("Got xpath "~xpath~" in node "~getName~"\n");
 		string truncxpath;
 		auto nextnode = getNextNode(xpath,truncxpath);
 		string attrmatch;
@@ -657,19 +658,19 @@ class XmlNode
 			// rip out attribute string
 			attrmatch = nextnode[offset..$];
 			nextnode = nextnode[0..offset];
-			debug(xpath)writef("Found attribute chunk: "~attrmatch~"\n");
+			debug(xpath)logline("Found attribute chunk: "~attrmatch~"\n");
 		}
-		debug(xpath)writef("Looking for "~nextnode~"\n");
+		debug(xpath)logline("Looking for "~nextnode~"\n");
 		XmlNode[]retarr;
 		// search through the children to see if we have a direct match on the next node
 		if (!nextnode.length) {
 			// we were searching for nodes, and this is one
-			debug(xpath)writef("Found a node we want! name is: "~getName~"\n");
+			debug(xpath)logline("Found a node we want! name is: "~getName~"\n");
 			retarr ~= this;
 		} else foreach(child;getChildren) if (!child.isCData && !child.isXmlComment && !child.isXmlPI && child.matchXPathAttr(attrmatch,caseSensitive)) {
 			if (!nextnode.length || (caseSensitive && child.getName == nextnode) || (!caseSensitive && !child.getName().icmp(nextnode))) {
 				// child that matches the search string, pass on the truncated string
-				debug(xpath)writef("Sending "~truncxpath~" to "~child.getName~"\n");
+				debug(xpath)logline("Sending "~truncxpath~" to "~child.getName~"\n");
 				retarr ~= child.parseXPath(truncxpath,caseSensitive);
 			}
 		}
@@ -684,7 +685,7 @@ class XmlNode
 	}
 
 	private bool matchXPathAttr(string attrstr,bool caseSen) {
-		debug(xpath)writef("matching attribute string "~attrstr~"\n");
+		debug(xpath)logline("matching attribute string "~attrstr~"\n");
 		if (attrstr.length < 2) {
 			// if there's no attribute list to check, then it matches
 			return true;
@@ -696,7 +697,7 @@ class XmlNode
 			attrstr = attrstr[1..$-1];
 		} else if (attrstr[0] == '[' || attrstr[$-1] == ']') {
 			// this seems to be malformed
-			debug(xpath)writef("got malformed attribute match "~attrstr~"\n");
+			debug(xpath)logline("got malformed attribute match "~attrstr~"\n");
 			return false;
 		}
 		if (attrstr.length < 2) {
@@ -705,7 +706,7 @@ class XmlNode
 		}
 		string[]attrlist = attrstr.split(" and ");
 		foreach(attr;attrlist) {
-			debug(xpath)writef("matching on "~attr~"\n");
+			debug(xpath)logline("matching on "~attr~"\n");
 			string datamatch;
 			int sep = attr.find("=");
 			// strip off the @ and separate the attribute and value if it exists
@@ -720,12 +721,12 @@ class XmlNode
 			}
 			// the !attr.length is just a precaution for the idiots that would do it
 			if (!attr.length || !hasAttribute(attr)) {
-				debug(xpath)writef("could not find "~attr~"\n");
+				debug(xpath)logline("could not find "~attr~"\n");
 				return false;
 			}
 			if (datamatch.length) {
 				if ((getAttribute(attr) != datamatch && caseSen) || (getAttribute(attr).icmp(datamatch) != 0 && !caseSen)) {
-					debug(xpath)writef("search value "~datamatch~" did not match attribute value "~getAttribute(attr)~"\n");
+					debug(xpath)logline("search value "~datamatch~" did not match attribute value "~getAttribute(attr)~"\n");
 					return false;
 				}
 			}
@@ -1095,7 +1096,7 @@ class XmlDocument:XmlNode {
 		try {
 			addChildren(constring,preserveWS);
 		} catch (XmlError e) {
-			writef("Caught exception from input string:\n"~pointcpy~"\n");
+			logline("Caught exception from input string:\n"~pointcpy~"\n");
 			throw e;
 		}
 	}
@@ -1234,17 +1235,17 @@ unittest {
 	XmlNode xml = xmlstring.readDocument();
 	xmlstring = xml.toString;
 	// ensure that the string doesn't mutate after a second reading, it shouldn't
-	debug(xml)writef("kxml.xml unit test\n");
+	debug(xml)logline("kxml.xml unit test\n");
 	assert(xmlstring.readDocument().toString == xmlstring);
-	debug(xpath)writef("kxml.xml XPath unit test\n");
+	debug(xpath)logline("kxml.xml XPath unit test\n");
 	XmlNode[]searchlist = xml.parseXPath("message/flags");
 	assert(searchlist.length == 2 && searchlist[0].getName == "flags");
 
-	debug(xpath)writef("kxml.xml deep XPath unit test\n");
+	debug(xpath)logline("kxml.xml deep XPath unit test\n");
 	searchlist = xml.parseXPath("//message//flags");
 	assert(searchlist.length == 2 && searchlist[0].getName == "flags");
 
-	debug(xpath)writef("kxml.xml attribute match XPath unit test\n");
+	debug(xpath)logline("kxml.xml attribute match XPath unit test\n");
 	searchlist = xml.parseXPath("/message[@type=\"message\" and @responseID=\"1234abcd\"]/flags");
 	assert(searchlist.length == 2 && searchlist[0].getName == "flags");
 	searchlist = xml.parseXPath("message[@type=\"toaster\"]/flags");
