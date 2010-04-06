@@ -378,6 +378,7 @@ class XmlNode
 	/// This function dumps the xml structure in to pretty, tabbed format.
 	string toPrettyString(string indent=null) {
 		string tmp;
+		if (isCData) return indent~toString~"\n";
 		if (getName.length) tmp = indent~asOpenTag()~"\n";
 
 		if (_children.length)
