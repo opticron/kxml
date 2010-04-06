@@ -352,8 +352,13 @@ class XmlNode
 		return tmp;
 	}
 
+	/// This is the old pretty string output function.  It is deprecated in favor of toPrettyString.
+	deprecated string write(string indent=null) {
+		return toPrettyString(indent);
+	}
+
 	/// This function dumps the xml structure in to pretty, tabbed format.
-	string write(string indent=null) {
+	string toPrettyString(string indent=null) {
 		string tmp;
 		if (getName.length) tmp = indent~asOpenTag()~"\n";
 
@@ -362,7 +367,7 @@ class XmlNode
 			for (int i = 0; i < _children.length; i++)
 			{
 				// these guys are supposed to do their own indentation
-				tmp ~= _children[i].write(indent~(getName.length?"	":"")); 
+				tmp ~= _children[i].toPrettyString(indent~(getName.length?"	":"")); 
 			}
 			if (getName.length) tmp ~= indent~asCloseTag()~"\n";
 		}
