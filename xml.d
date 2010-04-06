@@ -294,6 +294,24 @@ class XmlNode
 		}
 	}
 
+	/// This function removes all child nodes from the current node
+	XmlNode removeChildren() {
+		_children.length = 0;
+		return this;
+	}
+
+	/// This function sets the cdata inside the current node as intelligently as possible (without allocation, hopefully)
+	XmlNode setCData(string cdata) {
+		if (_children.length == 1 && _children[0].isCData) {
+			// since the only node is CData, just set the text and be done
+			_children[0].setCData(cdata);
+		} else {
+			removeChildren;
+			addCData(cdata);
+		}
+		return this;
+	}
+
 	/// This function gives you the inner xml as it would appear in the document.
 	string getInnerXML() {
 		string tmp;
@@ -805,7 +823,7 @@ class CData : XmlNode
 	}
 
 	/// This function assumes data is coming from user input, possibly with unescaped XML entities that need escaping.
-	CData setCData(string cdata) {
+	override CData setCData(string cdata) {
 		_cdata = xmlEncode(cdata);
 		return this;
 	}
