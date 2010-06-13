@@ -1204,36 +1204,34 @@ class XmlDocument:XmlNode {
 
 /// Encode characters such as &, <, >, etc. as their xml/html equivalents
 string xmlEncode(string src) {
-	string tempStr;
-        tempStr = replace(src    , "&", "&amp;");
-        tempStr = replace(tempStr, "<", "&lt;");
-        tempStr = replace(tempStr, ">", "&gt;");
-        tempStr = replace(tempStr, "\"", "&quot;");
-        tempStr = replace(tempStr, "'", "&apos;");
-        return tempStr;
+        src = replace(src, "&", "&amp;");
+        src = replace(src, "<", "&lt;");
+        src = replace(src, ">", "&gt;");
+        src = replace(src, "\"", "&quot;");
+        src = replace(src, "'", "&apos;");
+        return src;
 }
 
 /// Convert xml-encoded special characters such as &amp;amp; back to &amp;.
 string xmlDecode(string src) {
-	string tempStr;
-        tempStr = replace(src    , "&lt;",  "<");
-        tempStr = replace(tempStr, "&gt;",  ">");
-        tempStr = replace(tempStr, "&quot;",  "\"");
-        tempStr = replace(tempStr, "&amp;", "&");
-        tempStr = replace(tempStr, "&apos;", "'");
+        src = replace(src    , "&lt;",  "<");
+        src = replace(src, "&gt;",  ">");
+        src = replace(src, "&apos;", "'");
+        src = replace(src, "&quot;",  "\"");
 	// take care of decimal character entities
-	tempStr = regrep(tempStr,"&#\\d{1,8};",(string m) {
+	src = regrep(src,"&#\\d{1,8};",(string m) {
 		auto cnum = m[2..$-1];
 		dchar dnum = cast(dchar)atoi(cnum);
 		return quickUTF8(dnum);
 	});
 	// take care of hex character entities
-	tempStr = regrep(tempStr,"&#[xX][0-9a-fA-F]{1,8};",(string m) {
+	src = regrep(src,"&#[xX][0-9a-fA-F]{1,8};",(string m) {
 		auto cnum = m[3..$-1];
 		dchar dnum = hex2dchar(cnum);
 		return quickUTF8(dnum);
 	});
-        return tempStr;
+        src = replace(src, "&amp;", "&");
+        return src;
 }
 
 // a quick dchar to utf8 conversion
