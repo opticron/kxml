@@ -618,6 +618,9 @@ class XmlNode
 		for(i=0;i<input.length && !isspace(input[i]) && input[i] != '>' && input[i] != '/';i++){}
 		auto ret = input[0..i];
 		input = input[i..$];
+		if (!ret.length) {
+			throw new XmlError("Unable to parse token at: "~input);
+		}
 		return ret;
 	}
 
