@@ -772,15 +772,20 @@ class XmlNode
 	// this does not modify the incoming string, only pulls a slice out of it
 	private string getNextNode(string xpath,out string truncxpath) {
 		if (isDeepPath(xpath)) xpath = xpath[2..$];
-		string[]nodes = split(xpath,"/");
-		if (nodes.length) {
-			// leading slashes will be removed in recursive calls 
-			if (nodes.length > 1) truncxpath = xpath[nodes[0].length..$];
-			return nodes[0];
+		// dig through the pile of xpath, but make sure to respect attribute matches properly
+		int contexts = 0;
+		foreach (i,c;xpath) {
+			if (c == '[') contexts++;
+			if (c == ']') contexts--;
+			if (c == '/' && !contexts) {
+				// we've found the end of the current node
+				truncxpath = xpath[i..$];
+				return xpath[0..i];
+			}
 		}
 		// i'm not sure this can occur unless the string was blank to begin with...
 		truncxpath = null;
-		return null;
+		return xpath;
 	}
 
 	/// Index override for getting attributes.
