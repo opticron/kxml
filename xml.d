@@ -32,7 +32,6 @@
  */
 
 // TODO xpath
-//	add unittests for inequality operators
 //	support * for nodes and attributes
 //	support [#] (note that this is a 1-based index
 //	support [@*] to catch all nodes with attributes
@@ -639,7 +638,7 @@ class XmlNode
 	private string getWSToken(ref string input) {
 		input = stripl(input);
 		int i;
-		for(i=0;i<input.length && !isspace(input[i]) && input[i] != '>' && input[i] != '/' && input[i] != '<' && input[i] != '=';i++){}
+		for(i=0;i<input.length && !isspace(input[i]) && input[i] != '>' && input[i] != '/' && input[i] != '<' && input[i] != '=' && input[i] != '!';i++){}
 		auto ret = input[0..i];
 		input = input[i..$];
 		if (!ret.length) {
@@ -811,7 +810,7 @@ class XmlNode
 				// the !attr.length is just a precaution for the idiots that would do it
 				if (comparator.length && !attr.length) throw new XPathError("Got a comparator without anything to compare");
 				if (!hasAttribute(attrname)) {
-					debug(xpath)logline("could not find "~attr~"\n");
+					debug(xpath)logline("could not find "~attrname~"\n");
 					res[i] = false;
 					continue;
 				}
@@ -843,6 +842,7 @@ class XmlNode
 						} else {
 							lres |= (i1 == i2);
 						}
+						if (neg) lres = !lres;
 					}
 					res[i] = lres;
 					continue;
@@ -1394,7 +1394,7 @@ private dchar toHVal(char digit) {
 }
 
 unittest {
-	string xmlstring = "<message responseID=\"1234abcd\" text=\"weather 12345\" type=\"message\"><flags>triggered</flags><flags>targeted</flags></message>";
+	string xmlstring = "<message responseID=\"1234abcd\" text=\"weather 12345\" type=\"message\" order=\"5\"><flags>triggered</flags><flags>targeted</flags></message>";
 	XmlNode xml = xmlstring.readDocument();
 	xmlstring = xml.toString;
 	// ensure that the string doesn't mutate after a second reading, it shouldn't
@@ -1419,5 +1419,23 @@ unittest {
 	assert(searchlist.length == 2 && searchlist[0].getName == "flags");
 	searchlist = xml.parseXPath("/message[@type=\"yarblemessage\" or @responseID=\"1234abcd\"]/flags");
 	assert(searchlist.length == 2 && searchlist[0].getName == "flags");
+
+	logline("kxml.xml XPath inequality unit test\n");
+	searchlist = xml.parseXPath("/message[@order<6]/flags");
+	assert(searchlist.length == 2 && searchlist[0].getName == "flags");
+	searchlist = xml.parseXPath("/message[@order>4]/flags");
+	assert(searchlist.length == 2 && searchlist[0].getName == "flags");
+	searchlist = xml.parseXPath("/message[@order>=5]/flags");
+	assert(searchlist.length == 2 && searchlist[0].getName == "flags");
+	searchlist = xml.parseXPath("/message[@order<=5]/flags");
+	assert(searchlist.length == 2 && searchlist[0].getName == "flags");
+	searchlist = xml.parseXPath("/message[@order!=1]/flags");
+	assert(searchlist.length == 2 && searchlist[0].getName == "flags");
+	searchlist = xml.parseXPath("/message[@order=5]/flags");
+	assert(searchlist.length == 2 && searchlist[0].getName == "flags");
+}
+
+version(XML_main) {
+	void main(){}
 }
 
