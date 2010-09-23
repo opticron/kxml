@@ -31,14 +31,23 @@
  * Standards:	Attempts to conform to XML 1.0 Specification
  */
 
+// TODO xpath
+//	add unittests for inequality operators
+//	support * for nodes and attributes
+//	support [#] (note that this is a 1-based index
+//	support [@*] to catch all nodes with attributes
+//	support [not(@*)] to catch all nodes with no attributes
+//	support [last()] with math (yes, it's lame)? (last is $-1)
+
 module kxml.xml;
 version(Tango) {
 	import tango.text.Util:isspace=isSpace,stripl=triml,strip=trim,stripr=trimr,find=locatePattern,split,replace=substitute;
 	import tango.text.convert.Integer:tostring=toString,atoi=toInt;
-	import tango.text.convert.Float:tostring=toString;
+	import tango.text.convert.Float:tostring=toString,atof=toFloat;
 	import tango.text.Ascii:icmp=icompare,cmp=compare;
 	import tango.text.Regex;
 	import tango.stdc.stdio:printf;
+	import tango.core.Exception:IllegalArgumentException;
 	alias char[] string;
 	string regrep(string input,string pattern,string delegate(string) translator) {
 		string tmpdel(RegExpT!(char) m) {
@@ -47,13 +56,21 @@ version(Tango) {
 		auto rgxp = Regex(pattern,"g");
 		return rgxp.replaceAll(input,&tmpdel);
 	}
+	bool isNumeric(string input) {
+		try atof(input);
+		catch (IllegalArgumentException e) return false;
+		return true;
+	}
 } else {
 	version(D_Version2) {
 		import std.conv:to;
-		import std.string:strip,stripr,stripl,split,replace,find=indexOf,cmp,icmp;
+		import std.string:strip,stripr,stripl,split,replace,find=indexOf,cmp,icmp,isNumeric;
 		import core.stdc.stdio:printf;
-		real atoi(string data) {
+		int atoi(string data) {
 			return to!(int)(data);
+		}
+		real atof(string data) {
+			return to!(real)(data);
 		}
 		string tostring(long data) {
 			return to!(string)(data);
@@ -62,7 +79,7 @@ version(Tango) {
 			return to!(string)(data);
 		}
 	} else {
-		import std.string:tostring=toString,strip,stripr,stripl,split,replace,find,cmp,icmp,atoi;
+		import std.string:tostring=toString,strip,stripr,stripl,split,replace,find,cmp,icmp,atoi,atof,isNumeric;
 	}
 	import std.ctype:isspace;
 	import std.regexp:sub,RegExp;
@@ -120,11 +137,18 @@ XmlNode readDocument(string src,bool preserveWS=false)
 
 /// An exception thrown on an xml parsing error.
 class XmlError : Exception {
-	// Throws an exception with the current line number and an error message.
 	this(string msg) {
 		super(msg);
 	}
 }
+
+/// An exception thrown on an XPath parsing error.
+class XPathError : Exception {
+	this(string msg) {
+		super(msg);
+	}
+}
+
 
 /**
  * XmlNode represents a single xml node and has methods for modifying
@@ -615,7 +639,7 @@ class XmlNode
 	private string getWSToken(ref string input) {
 		input = stripl(input);
 		int i;
-		for(i=0;i<input.length && !isspace(input[i]) && input[i] != '>' && input[i] != '/';i++){}
+		for(i=0;i<input.length && !isspace(input[i]) && input[i] != '>' && input[i] != '/' && input[i] != '<' && input[i] != '=';i++){}
 		auto ret = input[0..i];
 		input = input[i..$];
 		if (!ret.length) {
@@ -679,7 +703,7 @@ class XmlNode
 		string truncxpath;
 		auto nextnode = getNextNode(xpath,truncxpath);
 		string attrmatch;
-		// need to be able to split the attribute match off even when it doesn't have [] around it
+		// XXX need to be able to split the attribute match off even when it doesn't have [] around it
 		int offset = nextnode.find("[");
 		if (offset != -1) {
 			// rip out attribute string
@@ -694,7 +718,7 @@ class XmlNode
 			// we were searching for nodes, and this is one
 			debug(xpath)logline("Found a node we want! name is: "~getName~"\n");
 			retarr ~= this;
-		} else foreach(child;getChildren) if (!child.isCData && !child.isXmlComment && !child.isXmlPI && child.matchXPathAttr(attrmatch,caseSensitive)) {
+		} else foreach(child;getChildren) if (!child.isCData && !child.isXmlComment && !child.isXmlPI && child.matchXPathPredicate(attrmatch,caseSensitive)) {
 			if (!nextnode.length || (caseSensitive && child.getName == nextnode) || (!caseSensitive && !child.getName().icmp(nextnode))) {
 				// child that matches the search string, pass on the truncated string
 				debug(xpath)logline("Sending "~truncxpath~" to "~child.getName~"\n");
@@ -711,54 +735,148 @@ class XmlNode
 		return retarr;
 	}
 
-	private bool matchXPathAttr(string attrstr,bool caseSen) {
+	private bool matchXPathPredicate(string attrstr,bool caseSen) {
 		debug(xpath)logline("matching attribute string "~attrstr~"\n");
-		if (attrstr.length < 2) {
-			// if there's no attribute list to check, then it matches
+		// strip off the encasing [] if it exists
+		if (!attrstr.length) {
 			return true;
 		}
-		// right now, this can only handle simple attribute matching
-		// i.e. no subnode matches, otherwise, the / in the subnode match will make things explode...badly
-		// strip off the encasing [] if it exists
 		if (attrstr[0] == '[' && attrstr[$-1] == ']') {
 			attrstr = attrstr[1..$-1];
 		} else if (attrstr[0] == '[' || attrstr[$-1] == ']') {
 			// this seems to be malformed
-			debug(xpath)logline("got malformed attribute match "~attrstr~"\n");
-			return false;
+			throw new XPathError("got malformed attribute match "~attrstr~"\n");
 		}
-		if (attrstr.length < 2) {
-			// if there's no attribute list to check, then it matches
-			return true;
+		// rip apart the xpath predicate assuming it's node and attribute matches
+		string[]attrlist;
+		// basically, we're splitting on " and " and " or ", but while respecting []
+		int bcount = 0;
+		int lslice = 0;
+		foreach (i,c;attrstr) {
+			if (c == '[') {
+				bcount++;
+			} else if (c == ']') {
+				bcount--;
+			} else if (bcount == 0 && c == ' ') {
+				if (i != lslice) {
+					attrlist ~= attrstr[lslice..i];
+				}
+				lslice = i+1;
+			}
 		}
-		string[]attrlist = attrstr.split(" and ");
-		foreach(attr;attrlist) {
+		// tack the last one on
+		attrlist ~= attrstr[lslice..$];
+		// length must be odd, otherwise the string is jank
+		if (!(attrlist.length%2)) throw new XPathError("Encountered a janky predicate: "~attrstr);
+		// verify that odd numbers are "and" or "or"
+		foreach (i,attr;attrlist) if (i%2 && attr != "and" && attr != "or") {
+			throw new XPathError("Encountered consecutive terms not separated by \"and\" or \"or\" starting at: "~attr);
+		} else if (!(i%2) && (attr == "and" || attr == "or")) {
+			throw new XPathError("Encountered consecutive joining terms (\"and\" or \"or\") in: "~attrstr);
+		}
+		bool[]res;
+		res.length = attrlist.length;
+		int numOrdTerms = 0;
+		debug(xpath)foreach (attr;attrlist) {
+			logline("Term: "~attr~"\n");
+		}
+		foreach (i,attr;attrlist) if (!(i%2)) {
 			debug(xpath)logline("matching on "~attr~"\n");
-			string datamatch;
-			int sep = attr.find("=");
-			// strip off the @ and separate the attribute and value if it exists
-			if (sep != -1) {
-				datamatch = attr[sep+1..$];
-				if (datamatch.length && datamatch[0] == '"' && datamatch[$-1] == '"') {
-					datamatch = datamatch[1..$-1];
-				}
-				attr = attr[1..sep];
-			} else {
+			// check to see if we're doing an attribute match
+			// there should be NO zero-length strings this far in
+			if (attr[0] == '@') {
 				attr = attr[1..$];
-			}
-			// the !attr.length is just a precaution for the idiots that would do it
-			if (!attr.length || !hasAttribute(attr)) {
-				debug(xpath)logline("could not find "~attr~"\n");
-				return false;
-			}
-			if (datamatch.length) {
-				if ((getAttribute(attr) != datamatch && caseSen) || (getAttribute(attr).icmp(datamatch) != 0 && !caseSen)) {
-					debug(xpath)logline("search value "~datamatch~" did not match attribute value "~getAttribute(attr)~"\n");
-					return false;
+				string comparator;
+				auto attrname = getWSToken(attr);
+				bool verbatim = false;
+				attr = stripl(attr);
+				// if there is still data in attr, it's time to look for a comparison operator
+				if (attr.length) {
+					// figure out what comparison needs to be done
+					if (attr.length > 1 && (attr[0] == '<' || attr[0] == '>' || attr[0] == '!') && attr[1] == '=') {
+						comparator = attr[0..2];
+						attr = stripl(attr[2..$]);
+					} else if (attr[0] == '<' || attr[0] == '>' || attr[0] == '=') {
+						comparator = attr[0..1];
+						attr = stripl(attr[1..$]);
+					} else {
+						throw new XPathError("Could not determine comparator at: "~attr);
+					}
+					// strip off quotes if necessary
+					if (attr.length > 1 && attr[0] == '"' && attr[$-1] == '"') {
+						attr = attr[1..$-1];
+						verbatim = true;
+					}
 				}
+				// the !attr.length is just a precaution for the idiots that would do it
+				if (comparator.length && !attr.length) throw new XPathError("Got a comparator without anything to compare");
+				if (!hasAttribute(attrname)) {
+					debug(xpath)logline("could not find "~attr~"\n");
+					res[i] = false;
+					continue;
+				}
+				if (comparator.length) {
+					bool lres,neg = false,i1num = isNumeric(getAttribute(attrname)),i2num = isNumeric(attr);
+					// currently ignoring verbatim in this section of code
+					// we can't compare non-numerics without quotes
+					if (!verbatim && (!i2num || !i2num)) {
+						res[i] = false;
+						continue;
+					}
+					// get numeric equivalents
+					double i1 = atof(getAttribute(attrname)),i2 = atof(attr);
+					// XXX need to beware of verbatim here
+					if (comparator[0] == '<') {
+						lres = (i1 < i2);
+					} else if (comparator[0] == '>') {
+						lres = (i1 > i2);
+					} else if (comparator[0] == '!') neg = true;
+					// check to see if equality is also called for
+					if (comparator.length > 1 || comparator == "=") {
+						if (verbatim) {
+							if ((getAttribute(attrname) != attr && caseSen) || (getAttribute(attrname).icmp(attr) != 0 && !caseSen)) {
+								debug(xpath)logline("search value "~attr~" did not match attribute value "~getAttribute(attrname)~"\n");
+								lres = false;
+							} else {
+								lres = true;
+							}
+						} else {
+							lres |= (i1 == i2);
+						}
+					}
+					res[i] = lres;
+					continue;
+				}
+				res[i] = true;
+				continue;
+			}
+			// XXX take care of other types of matches other than attribute matches
+		} else if (attr == "or") {
+			numOrdTerms++;
+		}
+		// collect "and" terms into "or" groups
+		bool[]ordTerms;
+		ordTerms.length = numOrdTerms + 1;
+		ordTerms[0] = res[0];
+		debug(xpath)logline("res[0]="~tostring(res[0])~"\n");
+		numOrdTerms = 0; // we're using this as current position, now
+		foreach (i,attr;attrlist) if (i%2) {
+			if (attr == "and") {
+				debug(xpath)logline("combining anded terms on ord term "~tostring(numOrdTerms)~" and i="~tostring(i)~" with res.length="~tostring(res.length)~" and attrlist.length="~tostring(attrlist.length)~"\n");
+				ordTerms[numOrdTerms] &= res[i+1];
+				debug(xpath)logline("res["~tostring(i+1)~"]="~tostring(res[i+1])~"\n");
+			} else if (attr == "or") {
+				numOrdTerms++;
+				ordTerms[numOrdTerms] = res[i+1];
+			} else {
+				throw new XPathError("Erm...nuh uh");
 			}
 		}
-		return true;
+		// now that results have been determined, map them to a final result using "and" and "or"
+		bool ret = false;
+		foreach (val;ordTerms) ret |= val;
+		debug(xpath)logline("Ended up with "~tostring(ret)~"\n");
+		return ret;
 	}
 	
 	private bool isDeepPath(string xpath) {
@@ -1280,20 +1398,26 @@ unittest {
 	XmlNode xml = xmlstring.readDocument();
 	xmlstring = xml.toString;
 	// ensure that the string doesn't mutate after a second reading, it shouldn't
-	debug(xml)logline("kxml.xml unit test\n");
+	logline("kxml.xml unit test\n");
 	assert(xmlstring.readDocument().toString == xmlstring);
-	debug(xpath)logline("kxml.xml XPath unit test\n");
+	logline("kxml.xml XPath unit test\n");
 	XmlNode[]searchlist = xml.parseXPath("message/flags");
 	assert(searchlist.length == 2 && searchlist[0].getName == "flags");
 
-	debug(xpath)logline("kxml.xml deep XPath unit test\n");
+	logline("kxml.xml deep XPath unit test\n");
 	searchlist = xml.parseXPath("//message//flags");
 	assert(searchlist.length == 2 && searchlist[0].getName == "flags");
 
-	debug(xpath)logline("kxml.xml attribute match XPath unit test\n");
+	logline("kxml.xml attribute match 'and' XPath unit test\n");
 	searchlist = xml.parseXPath("/message[@type=\"message\" and @responseID=\"1234abcd\"]/flags");
 	assert(searchlist.length == 2 && searchlist[0].getName == "flags");
 	searchlist = xml.parseXPath("message[@type=\"toaster\"]/flags");
 	assert(searchlist.length == 0);
+
+	logline("kxml.xml attribute match 'or' XPath unit test\n");
+	searchlist = xml.parseXPath("/message[@type=\"message\" or @responseID=\"134abcd\"]/flags");
+	assert(searchlist.length == 2 && searchlist[0].getName == "flags");
+	searchlist = xml.parseXPath("/message[@type=\"yarblemessage\" or @responseID=\"1234abcd\"]/flags");
+	assert(searchlist.length == 2 && searchlist[0].getName == "flags");
 }
 
