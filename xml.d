@@ -32,6 +32,8 @@
  */
 
 // TODO xpath
+//	support full paths for both sides of the inequality (start with one side...)
+//	support node cdata matching
 //	support * for nodes and attributes
 //	support [#] (note that this is a 1-based index
 //	support [@*] to catch all nodes with attributes
@@ -1398,29 +1400,29 @@ unittest {
 	XmlNode xml = xmlstring.readDocument();
 	xmlstring = xml.toString;
 	// ensure that the string doesn't mutate after a second reading, it shouldn't
-	logline("kxml.xml unit test\n");
+	logline("kxml.xml test\n");
 	assert(xmlstring.readDocument().toString == xmlstring);
-	logline("kxml.xml XPath unit test\n");
+	logline("kxml.xml XPath test\n");
 	XmlNode[]searchlist = xml.parseXPath("message/flags");
 	assert(searchlist.length == 2 && searchlist[0].getName == "flags");
 
-	logline("kxml.xml deep XPath unit test\n");
+	logline("kxml.xml deep XPath test\n");
 	searchlist = xml.parseXPath("//message//flags");
 	assert(searchlist.length == 2 && searchlist[0].getName == "flags");
 
-	logline("kxml.xml attribute match 'and' XPath unit test\n");
+	logline("kxml.xml attribute match 'and' XPath test\n");
 	searchlist = xml.parseXPath("/message[@type=\"message\" and @responseID=\"1234abcd\"]/flags");
 	assert(searchlist.length == 2 && searchlist[0].getName == "flags");
 	searchlist = xml.parseXPath("message[@type=\"toaster\"]/flags");
 	assert(searchlist.length == 0);
 
-	logline("kxml.xml attribute match 'or' XPath unit test\n");
+	logline("kxml.xml attribute match 'or' XPath test\n");
 	searchlist = xml.parseXPath("/message[@type=\"message\" or @responseID=\"134abcd\"]/flags");
 	assert(searchlist.length == 2 && searchlist[0].getName == "flags");
 	searchlist = xml.parseXPath("/message[@type=\"yarblemessage\" or @responseID=\"1234abcd\"]/flags");
 	assert(searchlist.length == 2 && searchlist[0].getName == "flags");
 
-	logline("kxml.xml XPath inequality unit test\n");
+	logline("kxml.xml XPath inequality test\n");
 	searchlist = xml.parseXPath("/message[@order<6]/flags");
 	assert(searchlist.length == 2 && searchlist[0].getName == "flags");
 	searchlist = xml.parseXPath("/message[@order>4]/flags");
@@ -1433,6 +1435,10 @@ unittest {
 	assert(searchlist.length == 2 && searchlist[0].getName == "flags");
 	searchlist = xml.parseXPath("/message[@order=5]/flags");
 	assert(searchlist.length == 2 && searchlist[0].getName == "flags");
+
+	/*logline("kxml.xml XPath subnote match test\n");
+	searchlist = xml.parseXPath("/message[flags@tweak]");
+	assert(searchlist.length == 2 && searchlist[0].getName == "flags");*/
 }
 
 version(XML_main) {
