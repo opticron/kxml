@@ -62,16 +62,20 @@ version(Tango) {
 		catch (IllegalArgumentException e) return false;
 		return true;
 	}
+	private void logline(string str) { printf("%*s",str); }
 } else {
 	version(D_Version2) {
 		import std.conv:to;
-		import std.string:strip,stripr,stripl,split,replace,find=indexOf,cmp,icmp,isNumeric;
+		import std.string:strip,stripr=stripRight,stripl=stripLeft,split,replace,find=indexOf,cmp,icmp,isNumeric,toStringz;
+		import core.stdc.stdlib:catof=atof;
+		import std.ascii:isspace=isWhite;
 		import core.stdc.stdio:printf;
 		int atoi(string data) {
 			return to!(int)(data);
 		}
 		real atof(string data) {
-			return to!(real)(data);
+			// Hacky McHackington.
+			return catof(toStringz(data));
 		}
 		string tostring(long data) {
 			return to!(string)(data);
@@ -79,20 +83,29 @@ version(Tango) {
 		string tostring(float data) {
 			return to!(string)(data);
 		}
+		import std.regex;
+		string regrep(string input, string pattern, string delegate(string) translator) {
+			string tmpdel(RegexMatch!(string) m) {
+				return translator(m.hit);
+			}
+			return std.regex.replace!(tmpdel)(input, regex(pattern, "g"));
+		}
 	} else {
 		import std.string:tostring=toString,strip,stripr,stripl,split,replace,find,cmp,icmp,atoi,atof,isNumeric;
-	}
-	import std.ctype:isspace;
-	import std.regexp:sub,RegExp;
-	string regrep(string input,string pattern,string delegate(string) translator) {
-		string tmpdel(RegExp m) {
-			return translator(m.match(0));
+		import std.ctype:isspace;
+		import std.regexp:sub,RegExp;
+		string regrep(string input,string pattern,string delegate(string) translator) {
+			string tmpdel(RegExp m) {
+				return translator(m.match(0));
+			}
+			return sub(input,pattern,&tmpdel,"g");
 		}
-		return sub(input,pattern,&tmpdel,"g");
 	}
-}
-private void logline(string str) {
-	printf("%*s",str);
+	import std.stdio;
+	private void logline(string str) {
+		// 64 bit DMD doesn't like calling varargs very much.
+		std.stdio.writef("%s", str);
+	}
 }
 
 /**
@@ -259,9 +272,9 @@ class XmlNode
 
 	/// Remove the child with the same reference as what was given.
 	/// Returns: The number of children removed.
-	int removeChild(XmlNode remove) {
-		int len = _children.length;
-		for (int i = 0;i<_children.length;i++) if (_children[i] is remove) {
+	size_t removeChild(XmlNode remove) {
+		size_t len = _children.length;
+		for (size_t i = 0;i<_children.length;i++) if (_children[i] is remove) {
 			// we matched it, so remove it
 			// don't return true yet, since we're removing all references to it, not just the first one
 			_children = _children[0..i]~_children[i+1..$];
@@ -439,7 +452,7 @@ class XmlNode
 
 	// snag some text and lob it into a cdata node
 	private void parseCData(XmlNode parent,ref string xsrc,bool preserveWS) {
-		int slice;
+		ptrdiff_t slice;
 		string token;
 		slice = readUntil(xsrc,"<");
 		token = xsrc[0..slice];
@@ -455,7 +468,7 @@ class XmlNode
 
 	// parse out a close tag and make sure it's the one we want
 	private void parseCloseTag(XmlNode parent,ref string xsrc) {
-		int slice;
+		ptrdiff_t slice;
 		string token;
 		slice = readUntil(xsrc,">");
 		token = strip(xsrc[1..slice]);
@@ -495,7 +508,7 @@ class XmlNode
 
 	// rip off an unparsed character data node
 	private void parseUCData(XmlNode parent,ref string xsrc) {
-		int slice;
+		ptrdiff_t slice;
 		string token;
 		xsrc = xsrc[7..$];
 		slice = readUntil(xsrc,"]]>");
@@ -510,7 +523,7 @@ class XmlNode
 
 	// rip off a comment
 	private void parseComment(XmlNode parent,ref string xsrc) {
-		int slice;
+		ptrdiff_t slice;
 		string token;
 		xsrc = xsrc[2..$];
 		slice = readUntil(xsrc,"-->");
@@ -523,7 +536,7 @@ class XmlNode
 
 	// rip off a XML Instruction
 	private void parseXMLInst(XmlNode parent,ref string xsrc) {
-		int slice;
+		ptrdiff_t slice;
 		string token;
 		slice = readUntil(xsrc,">");
 		slice += ">".length;
@@ -626,9 +639,9 @@ class XmlNode
 	}
 
 	// read data until the delimiter is found, return the index where the delimiter starts
-	private int readUntil(string xsrc, string delim) {
+	private ptrdiff_t readUntil(string xsrc, string delim) {
 		// the -delim.length is partially optimization and partially avoiding jumping the array bounds
-		int i = xsrc.find(delim);
+		ptrdiff_t i = xsrc.find(delim);
 		// yeah...if we didn't find it, then the whole string is the token :D
 		if (i == -1) {
 			return xsrc.length;
@@ -705,7 +718,7 @@ class XmlNode
 		auto nextnode = getNextNode(xpath,truncxpath);
 		string attrmatch;
 		// XXX need to be able to split the attribute match off even when it doesn't have [] around it
-		int offset = nextnode.find("[");
+		ptrdiff_t offset = nextnode.find("[");
 		if (offset != -1) {
 			// rip out attribute string
 			attrmatch = nextnode[offset..$];
@@ -752,7 +765,7 @@ class XmlNode
 		string[]attrlist;
 		// basically, we're splitting on " and " and " or ", but while respecting []
 		int bcount = 0;
-		int lslice = 0;
+		ptrdiff_t lslice = 0;
 		foreach (i,c;attrstr) {
 			if (c == '[') {
 				bcount++;
