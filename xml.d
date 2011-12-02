@@ -77,10 +77,7 @@ version(Tango) {
 			// Hacky McHackington.
 			return catof(toStringz(data));
 		}
-		string tostring(long data) {
-			return to!(string)(data);
-		}
-		string tostring(float data) {
+		string tostring(T)(T data) {
 			return to!(string)(data);
 		}
 		import std.regex;
