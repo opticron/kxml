@@ -82,7 +82,7 @@ version(Tango) {
 		}
 		import std.regex;
 		string regrep(string input, string pattern, string delegate(string) translator) {
-			string tmpdel(Captures!(string,ulong) m) {
+			string tmpdel(Captures!(string,size_t) m) {
 				return translator(m.hit);
 			}
 			return std.regex.replace!(tmpdel)(input, regex(pattern, "g"));
