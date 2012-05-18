@@ -1568,6 +1568,9 @@ unittest {
 	searchlist = xml.parseXPath(`//tr[@ab>=9 and th="Head"]/td`);
 	assert(searchlist.length == 1 && searchlist[0].getCData == "Text 2.3");
 
+	logline("kxml.xml XPath cdata matching tests\n");
+	searchlist = xml.parseXPath(`//td[.="Text 2.3"]`);
+	assert(searchlist.length == 1);
 
 }
 
