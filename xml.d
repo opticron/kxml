@@ -859,6 +859,11 @@ class XmlNode
 					continue;
 				}
 				res[i] = compareXPathPredicate(elem1, comparator, elem2, getAttribute(elem1), caseSen);
+			} else if (elem1 == ".") {
+				if (compareXPathPredicate(elem1, comparator, elem2, this.getCData, caseSen)) {
+					res[i] = true;
+				}
+				debug(xpath)if(!res[j]) logline("did not match this node\n");
 			} else {
 				// assume elem1 is a tag
 				foreach(child;getChildren) { 
