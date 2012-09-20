@@ -33,12 +33,12 @@
 
 // TODO xpath
 //	support full paths for both sides of the inequality (start with one side...)
-//	support node cdata matching
 //	support * for nodes and attributes
-//	support [#] (note that this is a 1-based index
+//	support [#] (note that this is a 1-based index)
 //	support [@*] to catch all nodes with attributes
 //	support [not(@*)] to catch all nodes with no attributes
 //	support [last()] with math (yes, it's lame)? (last is $-1)
+//	add <?xml ?> XmlPI to the beginning of xmldocuments
 
 module kxml.xml;
 version(Tango) {
@@ -511,9 +511,9 @@ class XmlNode
 		slice = readUntil(xsrc,"]]>");
 		token = xsrc[0..slice];
 		xsrc = xsrc[slice+3..$];
-		debug(xml)logline("I found cdata text: "~token~"\n");
+		debug(xml)logline("I found ucdata text: "~token~"\n");
 		// DO NOT CHANGE THIS TO USE THE CONSTRUCTOR, BECAUSE THE CONSTRUCTOR IS FOR USER USE
-		auto cd = (_docroot?_docroot.allocCData:new CData);
+		auto cd = (_docroot?_docroot.allocUCData:new UCData);
 		cd._cdata = token;
 		parent.addChild(cd);
 	}
@@ -1110,6 +1110,36 @@ class CData : XmlNode
 	}
 }
 
+/// A specialization of CData for <![CDATA[]]> nodes
+class UCData : CData {
+	/// Get CData string associated with this object.
+	/// Returns: Unparsed Character Data
+	override string getCData() {
+		return _cdata;
+	}
+
+	/// This function assumes data is coming from user input, possibly with unescaped XML entities that need escaping.
+	override CData setCData(string cdata) {
+		_cdata = cdata;
+		return this;
+	}
+
+	/// This function resets the node to a default state
+	override void reset() {
+		// put back in the pool of available CData nodes if possible
+		if (_docroot) {
+			_docroot.ucdataNodes.length = _docroot.ucdataNodes.length + 1;
+			_docroot.ucdataNodes[$-1] = this;
+		}
+		_cdata = null;
+	}
+
+	/// This outputs escaped XML entities for use on the network or in a document.
+	protected override string toString() {
+		return "<![CDATA["~_cdata~"]]>";
+	}
+}
+
 /// A class specialization for XML instructions.
 class XmlPI : XmlNode {
 	this(){}
@@ -1304,6 +1334,7 @@ class XmlDocument:XmlNode {
 	protected XmlNode[]xmlNodes;
 	protected XmlComment[]xmlCommentNodes;
 	protected CData[]cdataNodes;
+	protected UCData[]ucdataNodes;
 	protected XmlPI[]xmlPINodes;
 	this() {
 		_docroot = this;
@@ -1369,6 +1400,21 @@ class XmlDocument:XmlNode {
 		} else {
 			// otherwise, allocate a new one and set it up properly
 			tmp = new CData();
+			tmp._docroot = this;
+		}
+		return tmp;
+	}
+
+	/// Allow usage of the free list and allocation for UCData nodes if necessary.
+	UCData allocUCData() {
+		UCData tmp;
+		// use already allocated instances if available
+		if (ucdataNodes.length) {
+			tmp = ucdataNodes[$-1];
+			ucdataNodes.length = ucdataNodes.length - 1;
+		} else {
+			// otherwise, allocate a new one and set it up properly
+			tmp = new UCData();
 			tmp._docroot = this;
 		}
 		return tmp;
@@ -1512,7 +1558,7 @@ unittest {
 	searchlist = xml.parseXPath("/message[@order=5]/flags");
 	assert(searchlist.length == 2 && searchlist[0].getName == "flags");
 
-	/*logline("kxml.xml XPath subnote match test\n");
+	/*logline("kxml.xml XPath subnode match test\n");
 	searchlist = xml.parseXPath("/message[flags@tweak]");
 	assert(searchlist.length == 2 && searchlist[0].getName == "flags");*/
 
@@ -1526,6 +1572,10 @@ unittest {
 	searchlist = xml.parseXPath(`/message[@order<6 and flags="fail"]/flags`);
 	assert(searchlist.length == 0);
 
+	xmlstring = "<![CDATA[cdata test <>>>>]]>";
+	xml = xmlstring.readDocument();
+	assert(xml.getCData == "cdata test <>>>>");
+	assert(xml.toString() == "<![CDATA[cdata test <>>>>]]>");
 
 	xmlstring =
 	`<table class="table1">
