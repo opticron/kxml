@@ -1,0 +1,10 @@
+{
+	"name": "kxml",
+	"description": "A D1/D2/Tango/Phobos/Phobos2 compatible XML parsing and generation library",
+	"homepage": "https://256.makerslocal.org/wiki/KXML",
+	"copyright": "Copyright 2013, Kinsey Moore",
+	"license": "BSL-1.0",
+	"authors": [
+		"Kinsey Moore"
+	]
+}
