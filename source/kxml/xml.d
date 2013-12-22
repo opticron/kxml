@@ -33,7 +33,7 @@
 
 // TODO xpath
 //	support full paths for both sides of the inequality (start with one side...)
-//	support * for nodes and attributes
+//	support * for attributes
 //	support [#] (note that this is a 1-based index)
 //	support [@*] to catch all nodes with attributes
 //	support [not(@*)] to catch all nodes with no attributes
@@ -735,7 +735,7 @@ class XmlNode
 				retarr ~= new CData(getAttribute(attr));
 			}
 		} else foreach(child;getChildren) if (!child.isCData && !child.isXmlComment && !child.isXmlPI && child.matchXPathPredicate(predmatch,caseSensitive)) {
-			if (!nextnode.length || (caseSensitive && child.getName == nextnode) || (!caseSensitive && !child.getName().icmp(nextnode))) {
+			if (!nextnode.length || (caseSensitive && child.getName == nextnode) || (!caseSensitive && !child.getName().icmp(nextnode)) || nextnode == "*") {
 				// child that matches the search string, pass on the truncated string
 				debug(xpath)logline("Sending "~truncxpath~" to "~child.getName~"\n");
 				retarr ~= child.parseXPath(truncxpath,caseSensitive);
