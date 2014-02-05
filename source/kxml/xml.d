@@ -669,17 +669,16 @@ class XmlNode
 			return ret;
 		}
 		string ripValue(ref string input) {
-		        int x;
+			int x;
 			char quot = input[0];
 			// rip off the starting quote
-		        input = input[1..$];
+			input = input[1..$];
 			// find the end of the string we want
-		        for(x = 0;input[x] != quot && x < input.length;x++) {
-		        }
-		        string tmp = input[0..x];
+			for(x = 0;x < input.length && input[x] != quot;x++) {}
+			string tmp = input[0..x];
 			// add one to leave off the quote
-		        input = input[x+1..$];
-		        return tmp;
+			input = input[x+1..$];
+			return tmp;
 		}
 
 		// snag the name from the attribute string
@@ -1454,20 +1453,20 @@ class XmlDocument:XmlNode {
 
 /// Encode characters such as &, <, >, etc. as their xml/html equivalents
 string xmlEncode(string src) {
-        src = replace(src, "&", "&amp;");
-        src = replace(src, "<", "&lt;");
-        src = replace(src, ">", "&gt;");
-        src = replace(src, "\"", "&quot;");
-        src = replace(src, "'", "&apos;");
-        return src;
+	src = replace(src, "&", "&amp;");
+	src = replace(src, "<", "&lt;");
+	src = replace(src, ">", "&gt;");
+	src = replace(src, "\"", "&quot;");
+	src = replace(src, "'", "&apos;");
+	return src;
 }
 
 /// Convert xml-encoded special characters such as &amp;amp; back to &amp;.
 string xmlDecode(string src) {
-        src = replace(src    , "&lt;",  "<");
-        src = replace(src, "&gt;",  ">");
-        src = replace(src, "&apos;", "'");
-        src = replace(src, "&quot;",  "\"");
+	src = replace(src    , "&lt;",  "<");
+	src = replace(src, "&gt;",  ">");
+	src = replace(src, "&apos;", "'");
+	src = replace(src, "&quot;",  "\"");
 	// take care of decimal character entities
 	src = regrep(src,"&#\\d{1,8};",(string m) {
 		auto cnum = m[2..$-1];
@@ -1480,8 +1479,8 @@ string xmlDecode(string src) {
 		dchar dnum = hex2dchar(cnum);
 		return quickUTF8(dnum);
 	});
-        src = replace(src, "&amp;", "&");
-        return src;
+	src = replace(src, "&amp;", "&");
+	return src;
 }
 
 // a quick dchar to utf8 conversion
@@ -1579,12 +1578,12 @@ unittest {
 
 	xmlstring =
 	`<table class="table1">
-	<tr>         <th>URL </th><td><a href="path1/path2">Link 1.1</a></td></tr>
+	<tr>	 <th>URL </th><td><a href="path1/path2">Link 1.1</a></td></tr>
 	<tr ab="two"><th>Head</th><td>Text 1.2</td></tr>
 	<tr ab="4">  <th>Head</th><td>Text 1.3</td></tr>
 	</table>
 	<table class="table2">
-	<tr>         <th>URL </th><td><a href="path1/path2">Link 2.1</a></td></tr>
+	<tr>	 <th>URL </th><td><a href="path1/path2">Link 2.1</a></td></tr>
 	<tr ab="six"><th>Head</th><td>Text 2.2</td></tr>
 	<tr ab="9">  <th>Head</th><td>Text 2.3</td></tr>
 	</table>`;
