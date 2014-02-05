@@ -675,6 +675,9 @@ class XmlNode
 			input = input[1..$];
 			// find the end of the string we want
 			for(x = 0;x < input.length && input[x] != quot;x++) {}
+			if (x == input.length) {
+				throw new XmlError("Missing attribute value terminator for value starting at "~input);
+			}
 			string tmp = input[0..x];
 			// add one to leave off the quote
 			input = input[x+1..$];
