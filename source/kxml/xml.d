@@ -992,7 +992,13 @@ class XmlNode
 	}
 
 	/// Index override for getting children.
-	XmlNode opIndex(int childnum) {
+	XmlNode opIndex(long childnum) {
+		if (childnum < _children.length) return _children[childnum];
+		return null;
+	}
+
+	/// Index override for getting children.
+	XmlNode opIndex(ulong childnum) {
 		if (childnum < _children.length) return _children[childnum];
 		return null;
 	}
