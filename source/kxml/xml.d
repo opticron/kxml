@@ -992,25 +992,7 @@ class XmlNode
 	}
 
 	/// Index override for getting children.
-	XmlNode opIndex(int childnum) {
-		if (childnum < _children.length) return _children[childnum];
-		return null;
-	}
-
-	/// Index override for getting children.
-	XmlNode opIndex(uint childnum) {
-		if (childnum < _children.length) return _children[childnum];
-		return null;
-	}
-
-	/// Index override for getting children.
-	XmlNode opIndex(long childnum) {
-		if (childnum < _children.length) return _children[childnum];
-		return null;
-	}
-
-	/// Index override for getting children.
-	XmlNode opIndex(ulong childnum) {
+	XmlNode opIndex(size_t childnum) {
 		if (childnum < _children.length) return _children[childnum];
 		return null;
 	}
