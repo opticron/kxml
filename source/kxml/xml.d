@@ -1569,6 +1569,8 @@ unittest {
 	assert(searchlist.length == 1 && searchlist[0].getName == "message");
 	searchlist = xml.parseXPath("/message[flags=directed]");
 	assert(searchlist.length == 0);
+	searchlist = xml.parseXPath("/[message/flags=targeted]");
+	assert(searchlist.length == 1 && searchlist[0].getName == "");
 
 	logline("kxml.xml XPath ??? tests\n");
 	searchlist = xml.parseXPath(`//@text`);
@@ -1617,8 +1619,6 @@ unittest {
 	assert(searchlist.length == 1);
 	searchlist = xml.parseXPath(`//table[@class!="table2"]//@ab`);
 	assert(searchlist.length == 2);
-//	searchlist = xml.parseXPath(`//@class!="table2"//@ab`);	// Should this work?
-//	assert(searchlist.length == 2);
 
 	logline("kxml.xml XPath predicate tests\n");
 	searchlist = xml.parseXPath(`//tr[@ab<=7]/td`);
