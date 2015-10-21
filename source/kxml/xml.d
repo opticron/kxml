@@ -710,6 +710,10 @@ class XmlNode
 	/// Do an XPath search on this node and return all matching nodes.
 	/// This function does not perform any modifications to the tree and so does not support XML mutation.
 	XmlNode[]parseXPath(string xpath,bool caseSensitive = false) {
+		if (!xpath.length) {
+			debug(xpath)logline("Got empty xpath in node "~getName~", returning this\n");
+			return [this];
+		}
 		// rip off the leading / if it's there and we're not looking for a deep path
 		if (!isDeepPath(xpath) && xpath.length && xpath[0] == '/') xpath = xpath[1..$];
 		debug(xpath)logline("Got xpath "~xpath~" in node "~getName~"\n");
@@ -741,6 +745,7 @@ class XmlNode
 				// child that matches the search string, pass on the truncated string
 				debug(xpath)logline("Sending "~truncxpath~" to "~child.getName~"\n");
 				retarr ~= child.parseXPath(truncxpath,caseSensitive);
+				debug(xpath)logline("Now have "~tostring(retarr.length)~" results for "~truncxpath~"\n");
 			}
 		}
 		// we aren't on us, but check to see if we're looking for a deep path, and delve in accordingly
@@ -865,21 +870,16 @@ class XmlNode
 				if (compareXPathPredicate(elem1, comparator, elem2, this.getCData, caseSen)) {
 					res[i] = true;
 				}
-				debug(xpath)if(!res[j]) logline("did not match this node\n");
+				debug(xpath)if(!res[i]) logline("did not match this node\n");
 			} else {
 				// assume elem1 is a tag
-				foreach(child;getChildren) { 
-					if (child.isCData || child.isXmlComment || child.isXmlPI || child.getName != elem1) {
-						continue;
-					}
-				
+				foreach(child;parseXPath(elem1)) {
 					if (compareXPathPredicate(elem1, comparator, elem2, child.getCData, caseSen)) {
 						res[i] = true;
 						break;
 					}
 				}
 			}				
-			// XXX take care of other types of matches other than attribute matches
 		} else if (pred == "or") {
 			numOrdTerms++;
 		}
@@ -956,7 +956,7 @@ class XmlNode
 			}
 			return lres;
 		}
-		return false;
+		return true;
 	}
 
 	private bool isDeepPath(string xpath) {
@@ -1560,9 +1560,15 @@ unittest {
 	searchlist = xml.parseXPath("/message[@order=5]/flags");
 	assert(searchlist.length == 2 && searchlist[0].getName == "flags");
 
-	/*logline("kxml.xml XPath subnode match test\n");
-	searchlist = xml.parseXPath("/message[flags@tweak]");
-	assert(searchlist.length == 2 && searchlist[0].getName == "flags");*/
+	logline("kxml.xml XPath subnode match test\n");
+	searchlist = xml.parseXPath("/message[flags]");
+	assert(searchlist.length == 1 && searchlist[0].getName == "message");
+	searchlist = xml.parseXPath("/message[flags=triggered]");
+	assert(searchlist.length == 1 && searchlist[0].getName == "message");
+	searchlist = xml.parseXPath("/message[flags=targeted]");
+	assert(searchlist.length == 1 && searchlist[0].getName == "message");
+	searchlist = xml.parseXPath("/message[flags=directed]");
+	assert(searchlist.length == 0);
 
 	logline("kxml.xml XPath ??? tests\n");
 	searchlist = xml.parseXPath(`//@text`);
